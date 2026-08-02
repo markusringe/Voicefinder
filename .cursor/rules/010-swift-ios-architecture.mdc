@@ -1,0 +1,16 @@
+---
+description: Swift and iOS architecture rules
+alwaysApply: true
+---
+
+# Swift iOS Architecture
+
+- Use SwiftUI for views and keep views lightweight.
+- Put app logic into view models, services, and orchestrators.
+- All STT, LLM, TTS, and audio components must sit behind protocols.
+- Use dependency injection via initializers.
+- Prefer async/await and AsyncStream.
+- Keep AVAudioEngine and model inference off the main thread.
+- Use MainActor only for UI-facing state changes.
+- Keep new types small and single-purpose.
+- Avoid global singletons unless unavoidable.

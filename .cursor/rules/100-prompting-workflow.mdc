@@ -1,0 +1,14 @@
+---
+description: Workflow instructions for Cursor in this repository
+alwaysApply: true
+---
+
+# Prompting Workflow
+
+- Start with a short implementation plan before writing code.
+- List the files that will be created or changed.
+- Keep the scope narrow and do not refactor unrelated areas.
+- Prefer compilable incremental edits.
+- When adding a feature, implement protocols first, then services, then orchestrator logic, then UI wiring, then tests.
+- If uncertain, choose the simplest working design.
+- Preserve existing naming and structure unless explicitly asked to change them.

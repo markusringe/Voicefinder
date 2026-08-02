@@ -1,0 +1,725 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		282E37DF3020031F00944A84 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 282E37DE3020031F00944A84 /* WhisperKit */; };
+		28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */; };
+		28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E51301FEDDE00DEAD24 /* ContentView.swift */; };
+		28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28B00E53301FEDEE00DEAD24 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		28B00E5A301FEDF000DEAD24 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 28B00E44301FEDDD00DEAD24 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 28B00E4B301FEDDD00DEAD24;
+			remoteInfo = Voicefinder;
+		};
+		28B00E64301FEDF000DEAD24 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 28B00E44301FEDDD00DEAD24 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 28B00E4B301FEDDD00DEAD24;
+			remoteInfo = Voicefinder;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		28B00EB23020019D00DEAD24 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitTranscriber.swift; sourceTree = "<group>"; };
+		282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelProvider.swift; sourceTree = "<group>"; };
+		28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Voicefinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicefinderApp.swift; sourceTree = "<group>"; };
+		28B00E51301FEDDE00DEAD24 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		28B00E53301FEDEE00DEAD24 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		28B00E59301FEDF000DEAD24 /* VoicefinderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		28B00E63301FEDF000DEAD24 /* VoicefinderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		28B00E76301FF7B300DEAD24 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		28B00E87301FFB3900DEAD24 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
+		28B00E88301FFB5700DEAD24 /* SpeechToTextEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechToTextEngine.swift; sourceTree = "<group>"; };
+		28B00E89301FFB6500DEAD24 /* LanguageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageEngine.swift; sourceTree = "<group>"; };
+		28B00E8A301FFB6F00DEAD24 /* TextToSpeechEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextToSpeechEngine.swift; sourceTree = "<group>"; };
+		28B00E8B301FFB7A00DEAD24 /* ChatTurn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTurn.swift; sourceTree = "<group>"; };
+		28B00E8C301FFB9400DEAD24 /* ConversationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationState.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		282E37E2302003BD00944A84 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
+		28B00E5C301FEDF000DEAD24 /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		28B00E66301FEDF000DEAD24 /* UITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		28B00E49301FEDDD00DEAD24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				282E37DF3020031F00944A84 /* WhisperKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E56301FEDF000DEAD24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E60301FEDF000DEAD24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		28B00E43301FEDDC00DEAD24 = {
+			isa = PBXGroup;
+			children = (
+				28B00E80301FFAC600DEAD24 /* App */,
+				28B00E7F301FFAB800DEAD24 /* Features */,
+				28B00E79301FFA3A00DEAD24 /* Core */,
+				28B00E5C301FEDF000DEAD24 /* Tests */,
+				28B00E66301FEDF000DEAD24 /* UITests */,
+				28B00E4D301FEDDE00DEAD24 /* Products */,
+				28B00E76301FF7B300DEAD24 /* Info.plist */,
+				28B00E53301FEDEE00DEAD24 /* Assets.xcassets */,
+				28B00E51301FEDDE00DEAD24 /* ContentView.swift */,
+				28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */,
+			);
+			sourceTree = "<group>";
+		};
+		28B00E4D301FEDDE00DEAD24 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */,
+				28B00E59301FEDF000DEAD24 /* VoicefinderTests.xctest */,
+				28B00E63301FEDF000DEAD24 /* VoicefinderUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		28B00E79301FFA3A00DEAD24 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E7E301FFAAE00DEAD24 /* Conversation */,
+				28B00E7D301FFAA500DEAD24 /* TextToSpeech */,
+				28B00E7C301FFA9B00DEAD24 /* Language */,
+				28B00E7B301FFA9100DEAD24 /* SpeechToText */,
+				28B00E7A301FFA7E00DEAD24 /* Audio */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		28B00E7A301FFA7E00DEAD24 /* Audio */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Audio;
+			sourceTree = "<group>";
+		};
+		28B00E7B301FFA9100DEAD24 /* SpeechToText */ = {
+			isa = PBXGroup;
+			children = (
+				282E37E2302003BD00944A84 /* Models */,
+				282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */,
+				282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */,
+				28B00E88301FFB5700DEAD24 /* SpeechToTextEngine.swift */,
+			);
+			path = SpeechToText;
+			sourceTree = "<group>";
+		};
+		28B00E7C301FFA9B00DEAD24 /* Language */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E89301FFB6500DEAD24 /* LanguageEngine.swift */,
+			);
+			path = Language;
+			sourceTree = "<group>";
+		};
+		28B00E7D301FFAA500DEAD24 /* TextToSpeech */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E8A301FFB6F00DEAD24 /* TextToSpeechEngine.swift */,
+			);
+			path = TextToSpeech;
+			sourceTree = "<group>";
+		};
+		28B00E7E301FFAAE00DEAD24 /* Conversation */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E8C301FFB9400DEAD24 /* ConversationState.swift */,
+				28B00E8B301FFB7A00DEAD24 /* ChatTurn.swift */,
+			);
+			path = Conversation;
+			sourceTree = "<group>";
+		};
+		28B00E7F301FFAB800DEAD24 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		28B00E80301FFAC600DEAD24 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				28B00E87301FFB3900DEAD24 /* AppDependencies.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		28B00E4B301FEDDD00DEAD24 /* Voicefinder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28B00E6D301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "Voicefinder" */;
+			buildPhases = (
+				28B00E48301FEDDD00DEAD24 /* Sources */,
+				28B00E49301FEDDD00DEAD24 /* Frameworks */,
+				28B00E4A301FEDDD00DEAD24 /* Resources */,
+				28B00EB23020019D00DEAD24 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Voicefinder;
+			packageProductDependencies = (
+				282E37DE3020031F00944A84 /* WhisperKit */,
+			);
+			productName = Voicefinder;
+			productReference = 28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */;
+			productType = "com.apple.product-type.application";
+		};
+		28B00E58301FEDF000DEAD24 /* VoicefinderTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28B00E70301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "VoicefinderTests" */;
+			buildPhases = (
+				28B00E55301FEDF000DEAD24 /* Sources */,
+				28B00E56301FEDF000DEAD24 /* Frameworks */,
+				28B00E57301FEDF000DEAD24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				28B00E5B301FEDF000DEAD24 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				28B00E5C301FEDF000DEAD24 /* Tests */,
+			);
+			name = VoicefinderTests;
+			packageProductDependencies = (
+			);
+			productName = VoicefinderTests;
+			productReference = 28B00E59301FEDF000DEAD24 /* VoicefinderTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		28B00E62301FEDF000DEAD24 /* VoicefinderUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28B00E73301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "VoicefinderUITests" */;
+			buildPhases = (
+				28B00E5F301FEDF000DEAD24 /* Sources */,
+				28B00E60301FEDF000DEAD24 /* Frameworks */,
+				28B00E61301FEDF000DEAD24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				28B00E65301FEDF000DEAD24 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				28B00E66301FEDF000DEAD24 /* UITests */,
+			);
+			name = VoicefinderUITests;
+			packageProductDependencies = (
+			);
+			productName = VoicefinderUITests;
+			productReference = 28B00E63301FEDF000DEAD24 /* VoicefinderUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		28B00E44301FEDDD00DEAD24 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					28B00E4B301FEDDD00DEAD24 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+					28B00E58301FEDF000DEAD24 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 28B00E4B301FEDDD00DEAD24;
+					};
+					28B00E62301FEDF000DEAD24 = {
+						CreatedOnToolsVersion = 26.3;
+						TestTargetID = 28B00E4B301FEDDD00DEAD24;
+					};
+				};
+			};
+			buildConfigurationList = 28B00E47301FEDDD00DEAD24 /* Build configuration list for PBXProject "Voicefinder" */;
+			developmentRegion = de;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				de,
+			);
+			mainGroup = 28B00E43301FEDDC00DEAD24;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				282E37DD3020031F00944A84 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 28B00E4D301FEDDE00DEAD24 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				28B00E4B301FEDDD00DEAD24 /* Voicefinder */,
+				28B00E58301FEDF000DEAD24 /* VoicefinderTests */,
+				28B00E62301FEDF000DEAD24 /* VoicefinderUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		28B00E4A301FEDDD00DEAD24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E57301FEDF000DEAD24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E61301FEDF000DEAD24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		28B00E48301FEDDD00DEAD24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */,
+				28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E55301FEDF000DEAD24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28B00E5F301FEDF000DEAD24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		28B00E5B301FEDF000DEAD24 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 28B00E4B301FEDDD00DEAD24 /* Voicefinder */;
+			targetProxy = 28B00E5A301FEDF000DEAD24 /* PBXContainerItemProxy */;
+		};
+		28B00E65301FEDF000DEAD24 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 28B00E4B301FEDDD00DEAD24 /* Voicefinder */;
+			targetProxy = 28B00E64301FEDF000DEAD24 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		28B00E6B301FEDF000DEAD24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		28B00E6C301FEDF000DEAD24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		28B00E6E301FEDF000DEAD24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Die App benötigt Zugriff auf das Mikrofon für Spracheingaben.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Die App benötigt Zugriff auf die Spracherkennung, um Gesprochenes in Text umzuwandeln.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.Voicefinder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		28B00E6F301FEDF000DEAD24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Die App benötigt Zugriff auf das Mikrofon für Spracheingaben.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Die App benötigt Zugriff auf die Spracherkennung, um Gesprochenes in Text umzuwandeln.";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.Voicefinder;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		28B00E71301FEDF000DEAD24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.VoicefinderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Voicefinder.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Voicefinder";
+			};
+			name = Debug;
+		};
+		28B00E72301FEDF000DEAD24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.VoicefinderTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Voicefinder.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Voicefinder";
+			};
+			name = Release;
+		};
+		28B00E74301FEDF000DEAD24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.VoicefinderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Voicefinder;
+			};
+			name = Debug;
+		};
+		28B00E75301FEDF000DEAD24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 7FPVS53ZF4;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = mbk.VoicefinderUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Voicefinder;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		28B00E47301FEDDD00DEAD24 /* Build configuration list for PBXProject "Voicefinder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28B00E6B301FEDF000DEAD24 /* Debug */,
+				28B00E6C301FEDF000DEAD24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28B00E6D301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "Voicefinder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28B00E6E301FEDF000DEAD24 /* Debug */,
+				28B00E6F301FEDF000DEAD24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28B00E70301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "VoicefinderTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28B00E71301FEDF000DEAD24 /* Debug */,
+				28B00E72301FEDF000DEAD24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28B00E73301FEDF000DEAD24 /* Build configuration list for PBXNativeTarget "VoicefinderUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28B00E74301FEDF000DEAD24 /* Debug */,
+				28B00E75301FEDF000DEAD24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		282E37DD3020031F00944A84 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit.git";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		282E37DE3020031F00944A84 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 282E37DD3020031F00944A84 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 28B00E44301FEDDD00DEAD24 /* Project object */;
+}

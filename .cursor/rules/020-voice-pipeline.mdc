@@ -1,0 +1,16 @@
+---
+description: Rules for the on-device voice pipeline
+alwaysApply: true
+---
+
+# Voice Pipeline
+
+- The pipeline is microphone -> STT -> language engine -> TTS -> speaker.
+- Support partial transcripts and final transcripts separately.
+- Prefer streaming responses instead of full-buffer generation.
+- Support interruption: if the user speaks during TTS playback, stop TTS quickly.
+- Keep turn state explicit and testable.
+- Apple Speech or SpeechAnalyzer should be the default STT path first.
+- WhisperKit can be used as an alternative or fallback STT engine.
+- Kokoro is the high-quality TTS engine; Apple TTS can be used as fallback.
+- Do not call STT or TTS frameworks directly from SwiftUI views.

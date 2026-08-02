@@ -1,0 +1,13 @@
+---
+description: Core context for the native Swift voice assistant project
+alwaysApply: true
+---
+
+# Project Context
+
+- This repository contains a native iOS app written in Swift and SwiftUI.
+- The app should support a mostly on-device voice interaction flow.
+- Speech-to-text, language generation, and text-to-speech must remain modular.
+- Favor privacy, local processing, low latency, and simple maintainable code.
+- Prefer incremental edits over broad rewrites.
+- Do not modify unrelated files.
