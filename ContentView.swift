@@ -8,6 +8,42 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var output = "Noch kein Test"
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Voicefinder")
+                .font(.largeTitle.bold())
+
+            Text(output)
+                .padding()
+
+            Button("WhisperKit testen") {
+                Task {
+                    do {
+                        let transcriber = WhisperKitTranscriber()
+                        try await transcriber.startStreaming()
+
+                        if let path = Bundle.main.path(forResource: "sample", ofType: "m4a") {
+                            let text = try await transcriber.transcribeFile(at: path, language: "de")
+                            output = text.isEmpty ? "Keine Transkription" : text
+                        } else {
+                            output = "sample.m4a nicht gefunden"
+                        }
+                    } catch {
+                        output = "Fehler: \(error.localizedDescription)"
+                    }
+                }
+            }
+        }
+        .padding()
+    }
+}
+
+/*
+import SwiftUI
+
+struct ContentView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
@@ -46,3 +82,4 @@ struct ContentView: View {
 #Preview {
     ContentView()
 }
+*/

@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		282E37DF3020031F00944A84 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 282E37DE3020031F00944A84 /* WhisperKit */; };
+		282E37E5302006E700944A84 /* sample.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 282E37E4302006E700944A84 /* sample.m4a */; };
+		282E37E6302007EB00944A84 /* WhisperKitTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */; };
+		282E37EA3020108000944A84 /* WhisperKitModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */; };
+		282E37E73020085300944A84 /* SpeechToTextEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E88301FFB5700DEAD24 /* SpeechToTextEngine.swift */; };
 		28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */; };
 		28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E51301FEDDE00DEAD24 /* ContentView.swift */; };
 		28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28B00E53301FEDEE00DEAD24 /* Assets.xcassets */; };
@@ -46,13 +50,13 @@
 /* Begin PBXFileReference section */
 		282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitTranscriber.swift; sourceTree = "<group>"; };
 		282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelProvider.swift; sourceTree = "<group>"; };
+		282E37E4302006E700944A84 /* sample.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = sample.m4a; sourceTree = "<group>"; };
 		28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Voicefinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicefinderApp.swift; sourceTree = "<group>"; };
 		28B00E51301FEDDE00DEAD24 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		28B00E53301FEDEE00DEAD24 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		28B00E59301FEDF000DEAD24 /* VoicefinderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28B00E63301FEDF000DEAD24 /* VoicefinderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		28B00E76301FF7B300DEAD24 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		28B00E87301FFB3900DEAD24 /* AppDependencies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDependencies.swift; sourceTree = "<group>"; };
 		28B00E88301FFB5700DEAD24 /* SpeechToTextEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechToTextEngine.swift; sourceTree = "<group>"; };
 		28B00E89301FFB6500DEAD24 /* LanguageEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageEngine.swift; sourceTree = "<group>"; };
@@ -63,6 +67,11 @@
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		282E37E2302003BD00944A84 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
+		282E37E93020105800944A84 /* Models */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Models;
 			sourceTree = "<group>";
@@ -105,19 +114,28 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		282E37E83020104100944A84 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				282E37E93020105800944A84 /* Models */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		28B00E43301FEDDC00DEAD24 = {
 			isa = PBXGroup;
 			children = (
+				282E37E83020104100944A84 /* Resources */,
 				28B00E80301FFAC600DEAD24 /* App */,
 				28B00E7F301FFAB800DEAD24 /* Features */,
 				28B00E79301FFA3A00DEAD24 /* Core */,
 				28B00E5C301FEDF000DEAD24 /* Tests */,
 				28B00E66301FEDF000DEAD24 /* UITests */,
 				28B00E4D301FEDDE00DEAD24 /* Products */,
-				28B00E76301FF7B300DEAD24 /* Info.plist */,
 				28B00E53301FEDEE00DEAD24 /* Assets.xcassets */,
 				28B00E51301FEDDE00DEAD24 /* ContentView.swift */,
 				28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */,
+				282E37E4302006E700944A84 /* sample.m4a */,
 			);
 			sourceTree = "<group>";
 		};
@@ -216,6 +234,9 @@
 			buildRules = (
 			);
 			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				282E37E93020105800944A84 /* Models */,
 			);
 			name = Voicefinder;
 			packageProductDependencies = (
@@ -324,6 +345,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				282E37E5302006E700944A84 /* sample.m4a in Resources */,
 				28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -350,7 +372,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */,
+				282E37E73020085300944A84 /* SpeechToTextEngine.swift in Sources */,
 				28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */,
+				282E37E6302007EB00944A84 /* WhisperKitTranscriber.swift in Sources */,
+				282E37EA3020108000944A84 /* WhisperKitModelProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

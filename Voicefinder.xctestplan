@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "9655C3AF-8E59-4F5D-BE53-81A5953B68E4",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Voicefinder.xcodeproj",
+      "identifier" : "28B00E4B301FEDDD00DEAD24",
+      "name" : "Voicefinder"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:Voicefinder.xcodeproj",
+        "identifier" : "28B00E58301FEDF000DEAD24",
+        "name" : "VoicefinderTests"
+      }
+    },
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:Voicefinder.xcodeproj",
+        "identifier" : "28B00E62301FEDF000DEAD24",
+        "name" : "VoicefinderUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

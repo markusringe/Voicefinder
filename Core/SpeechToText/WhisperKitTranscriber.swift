@@ -4,10 +4,10 @@
 //
 //  Created by Markus Ringe on 03.08.26.
 //
-
 import Foundation
 import WhisperKit
 
+/// WhisperKit-basierte STT-Implementierung mit lokal gebündeltem Offline-Modell.
 final class WhisperKitTranscriber: SpeechToTextEngine {
     let partialTextStream: AsyncStream<String>
     let finalTextStream: AsyncStream<String>
@@ -16,19 +16,18 @@ final class WhisperKitTranscriber: SpeechToTextEngine {
     private let finalContinuation: AsyncStream<String>.Continuation
 
     private var whisperKit: WhisperKit?
+    private let modelName: String
 
-    init() {
-        var partialCont: AsyncStream<String>.Continuation!
-        self.partialTextStream = AsyncStream<String> { continuation in
-            partialCont = continuation
-        }
-        self.partialContinuation = partialCont
+    init(modelName: String = WhisperKitModelProvider.defaultModelName) {
+        self.modelName = modelName
 
-        var finalCont: AsyncStream<String>.Continuation!
-        self.finalTextStream = AsyncStream<String> { continuation in
-            finalCont = continuation
-        }
-        self.finalContinuation = finalCont
+        let partialPair = AsyncStream<String>.makeStream()
+        self.partialTextStream = partialPair.stream
+        self.partialContinuation = partialPair.continuation
+
+        let finalPair = AsyncStream<String>.makeStream()
+        self.finalTextStream = finalPair.stream
+        self.finalContinuation = finalPair.continuation
     }
 
     func requestAuthorization() async -> Bool {
@@ -36,30 +35,61 @@ final class WhisperKitTranscriber: SpeechToTextEngine {
     }
 
     func startStreaming() async throws {
-        if whisperKit == nil {
-            whisperKit = try await WhisperKit()
-        }
+        _ = try await ensureInitialized()
     }
 
     func stopStreaming() async {
+        partialContinuation.finish()
+        finalContinuation.finish()
     }
 
     func transcribeFile(at path: String, language: String = "de") async throws -> String {
-        if whisperKit == nil {
-            whisperKit = try await WhisperKit()
-        }
+        let whisperKit = try await ensureInitialized()
 
-        guard let whisperKit else {
-            throw NSError(domain: "WhisperKitTranscriber", code: -1)
-        }
-
-        let result = try await whisperKit.transcribe(
-            audioPath: path,
-            decodeOptions: DecodingOptions(language: language)
+        let options = DecodingOptions(
+            task: .transcribe,
+            language: language,
+            temperature: 0.0,
+            skipSpecialTokens: true,
+            wordTimestamps: false
         )
 
-        let text = result?.text ?? ""
-        finalContinuation.yield(text)
+        let results = try await whisperKit.transcribe(
+            audioPath: path,
+            decodeOptions: options
+        )
+
+        let text = results
+            .map(\.text)
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !text.isEmpty {
+            finalContinuation.yield(text)
+        }
+
         return text
+    }
+
+    /// Initialisiert WhisperKit einmalig mit dem lokal im App-Bundle liegenden Modell.
+    private func ensureInitialized() async throws -> WhisperKit {
+        if let whisperKit {
+            return whisperKit
+        }
+
+        let modelFolderURL = try WhisperKitModelProvider.bundledModelFolderURL(modelName: modelName)
+        try WhisperKitModelProvider.validateBundledModel(at: modelFolderURL)
+
+        // download: false verhindert Hugging-Face-Downloads; Tokenizer liegt im selben Ordner.
+        let config = WhisperKitConfig(
+            model: modelName,
+            modelFolder: modelFolderURL.path,
+            tokenizerFolder: modelFolderURL,
+            download: false
+        )
+
+        let instance = try await WhisperKit(config)
+        self.whisperKit = instance
+        return instance
     }
 }
