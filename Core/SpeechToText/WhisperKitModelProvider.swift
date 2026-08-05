@@ -29,17 +29,46 @@ enum WhisperKitModelError: LocalizedError, Sendable {
 /// in das App-Bundle kopiert. WhisperKit lädt sie über `modelFolder` ohne Hugging-Face-Download.
 enum WhisperKitModelProvider {
     /// Standardmodellvariante, passend zum Ordner `openai_whisper-base`.
-    static let defaultModelName = "openai_whisper-base"
+    nonisolated static let defaultModelName = "openai_whisper-base"
+
+    /// Anzeigename für Startbildschirm und Einstellungen.
+    nonisolated static var activeModelName: String {
+        defaultModelName
+    }
+
+    /// True auf Gerät und arm64-Simulator – auf Intel-x86 nicht nutzbar.
+    nonisolated static var isWhisperKitSupported: Bool {
+        #if targetEnvironment(simulator) && arch(x86_64)
+        false
+        #else
+        true
+        #endif
+    }
+
+    /// True, wenn WhisperKit irgendwann geladen werden kann.
+    nonisolated static var requiresWhisperWarmup: Bool {
+        isWhisperKitSupported
+    }
+
+    /// True, wenn WhisperKit beim App-Start vorgeladen werden soll.
+    /// Auf dem Gerät lazy (kein paralleles Laden neben MLX); im Simulator Pflicht für Live-Aufnahme.
+    nonisolated static var requiresStartupWarmup: Bool {
+        #if targetEnvironment(simulator)
+        isWhisperKitSupported
+        #else
+        false
+        #endif
+    }
 
     /// Unterordner im Bundle, in dem Xcode die Modell-Ressourcen ablegt.
-    private static let modelsBundleSubdirectory = "Models"
+    nonisolated private static let modelsBundleSubdirectory = "Models"
 
     /// Liefert die URL zum gebündelten Modellordner mit CoreML-Dateien und Tokenizer.
     ///
     /// - Parameter modelName: Name des Modellordners, standardmäßig `openai_whisper-base`.
     /// - Returns: URL zum Modellverzeichnis im App-Bundle.
     /// - Throws: `WhisperKitModelError.modelNotFoundInBundle`, wenn die Ressource fehlt.
-    static func bundledModelFolderURL(modelName: String = defaultModelName) throws -> URL {
+    nonisolated static func bundledModelFolderURL(modelName: String = defaultModelName) throws -> URL {
         guard let url = Bundle.main.url(
             forResource: modelName,
             withExtension: nil,
@@ -53,7 +82,7 @@ enum WhisperKitModelProvider {
     /// Prüft, ob die wichtigsten Modell-Komponenten im Bundle vorhanden sind.
     ///
     /// Wird vor der WhisperKit-Initialisierung genutzt, um früh aussagekräftige Fehler zu liefern.
-    static func validateBundledModel(at folderURL: URL) throws {
+    nonisolated static func validateBundledModel(at folderURL: URL) throws {
         let requiredRelativePaths = [
             "config.json",
             "AudioEncoder.mlmodelc/weights/weight.bin",

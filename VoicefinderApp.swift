@@ -11,7 +11,7 @@ import SwiftUI
 struct VoicefinderApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AppBootstrapView()
         }
     }
 }

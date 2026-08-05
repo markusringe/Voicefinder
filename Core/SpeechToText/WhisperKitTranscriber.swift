@@ -8,9 +8,10 @@ import Foundation
 import WhisperKit
 
 /// WhisperKit-basierte STT-Implementierung mit lokal gebündeltem Offline-Modell.
-final class WhisperKitTranscriber: SpeechToTextEngine {
+final class WhisperKitTranscriber: SpeechToTextEngine, FileTranscribing {
     let partialTextStream: AsyncStream<String>
     let finalTextStream: AsyncStream<String>
+    let audioLevelStream: AsyncStream<Float>
 
     private let partialContinuation: AsyncStream<String>.Continuation
     private let finalContinuation: AsyncStream<String>.Continuation
@@ -28,6 +29,9 @@ final class WhisperKitTranscriber: SpeechToTextEngine {
         let finalPair = AsyncStream<String>.makeStream()
         self.finalTextStream = finalPair.stream
         self.finalContinuation = finalPair.continuation
+
+        // Nur Datei-Transkription – kein Live-Mikrofon-Pegel.
+        self.audioLevelStream = AudioLevelNormalizer.emptyStream()
     }
 
     func requestAuthorization() async -> Bool {
@@ -69,6 +73,11 @@ final class WhisperKitTranscriber: SpeechToTextEngine {
         }
 
         return text
+    }
+
+    /// Lädt WhisperKit vorab (Startbildschirm / Sample-Tests).
+    func prepareModelsIfNeeded() async throws {
+        _ = try await ensureInitialized()
     }
 
     /// Initialisiert WhisperKit einmalig mit dem lokal im App-Bundle liegenden Modell.

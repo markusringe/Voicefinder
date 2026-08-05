@@ -19,7 +19,8 @@ struct ChatTurn: Identifiable, Equatable, Codable, Sendable {
     let text: String
     let createdAt: Date
 
-    init(
+    /// Explizit nicht MainActor-isoliert – wird aus dem Conversation-Orchestrator-Actor erzeugt.
+    nonisolated init(
         id: UUID = UUID(),
         role: SpeakerRole,
         text: String,

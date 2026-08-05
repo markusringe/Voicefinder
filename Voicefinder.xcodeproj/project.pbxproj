@@ -9,12 +9,12 @@
 /* Begin PBXBuildFile section */
 		282E37DF3020031F00944A84 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = 282E37DE3020031F00944A84 /* WhisperKit */; };
 		282E37E5302006E700944A84 /* sample.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 282E37E4302006E700944A84 /* sample.m4a */; };
-		282E37E6302007EB00944A84 /* WhisperKitTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */; };
-		282E37EA3020108000944A84 /* WhisperKitModelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */; };
-		282E37E73020085300944A84 /* SpeechToTextEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E88301FFB5700DEAD24 /* SpeechToTextEngine.swift */; };
+		282E37E93020105800944A85 /* Models in Resources */ = {isa = PBXBuildFile; fileRef = 282E37E93020105800944A84 /* Models */; };
 		28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */; };
-		28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B00E51301FEDDE00DEAD24 /* ContentView.swift */; };
 		28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 28B00E53301FEDEE00DEAD24 /* Assets.xcassets */; };
+		28PKG010301FMLX000000010 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 28PKG020301FMLX000000020 /* MLXLLM */; };
+		28PKG011301FMLX000000011 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 28PKG021301FMLX000000021 /* MLXLMCommon */; };
+		28PKG012301FSHERPA00000012 /* SherpaOnnx in Frameworks */ = {isa = PBXBuildFile; productRef = 28PKG022301FSHERPA00000022 /* SherpaOnnx */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,9 +51,9 @@
 		282E37E0302003A100944A84 /* WhisperKitTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitTranscriber.swift; sourceTree = "<group>"; };
 		282E37E1302003B000944A84 /* WhisperKitModelProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelProvider.swift; sourceTree = "<group>"; };
 		282E37E4302006E700944A84 /* sample.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = sample.m4a; sourceTree = "<group>"; };
+		282E37E93020105800944A84 /* Models */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Models; sourceTree = "<group>"; };
 		28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Voicefinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoicefinderApp.swift; sourceTree = "<group>"; };
-		28B00E51301FEDDE00DEAD24 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		28B00E53301FEDEE00DEAD24 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		28B00E59301FEDF000DEAD24 /* VoicefinderTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28B00E63301FEDF000DEAD24 /* VoicefinderUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VoicefinderUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -65,13 +65,18 @@
 		28B00E8C301FFB9400DEAD24 /* ConversationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationState.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		28SYNC0EX301FFAC600DEAD25 /* Exceptions for "App" folder in "Voicefinder" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 28B00E4B301FEDDD00DEAD24 /* Voicefinder */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		282E37E2302003BD00944A84 /* Models */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Models;
-			sourceTree = "<group>";
-		};
-		282E37E93020105800944A84 /* Models */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Models;
 			sourceTree = "<group>";
@@ -86,6 +91,24 @@
 			path = UITests;
 			sourceTree = "<group>";
 		};
+		28SYNC001301FFAC600DEAD24 /* Core */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Core;
+			sourceTree = "<group>";
+		};
+		28SYNC002301FFAB800DEAD24 /* Features */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Features;
+			sourceTree = "<group>";
+		};
+		28SYNC003301FFAC600DEAD25 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				28SYNC0EX301FFAC600DEAD25 /* Exceptions for "App" folder in "Voicefinder" target */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +117,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				282E37DF3020031F00944A84 /* WhisperKit in Frameworks */,
+				28PKG010301FMLX000000010 /* MLXLLM in Frameworks */,
+				28PKG011301FMLX000000011 /* MLXLMCommon in Frameworks */,
+				28PKG012301FSHERPA00000012 /* SherpaOnnx in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -122,6 +148,16 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		28A87E8F30227DBA0096782D /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				28SYNC001301FFAC600DEAD24 /* Core */,
+				28SYNC002301FFAB800DEAD24 /* Features */,
+				28SYNC003301FFAC600DEAD25 /* App */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		28B00E43301FEDDC00DEAD24 = {
 			isa = PBXGroup;
 			children = (
@@ -133,9 +169,9 @@
 				28B00E66301FEDF000DEAD24 /* UITests */,
 				28B00E4D301FEDDE00DEAD24 /* Products */,
 				28B00E53301FEDEE00DEAD24 /* Assets.xcassets */,
-				28B00E51301FEDDE00DEAD24 /* ContentView.swift */,
 				28B00E4F301FEDDE00DEAD24 /* VoicefinderApp.swift */,
 				282E37E4302006E700944A84 /* sample.m4a */,
+				28A87E8F30227DBA0096782D /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -236,11 +272,16 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				282E37E93020105800944A84 /* Models */,
+				28SYNC001301FFAC600DEAD24 /* Core */,
+				28SYNC002301FFAB800DEAD24 /* Features */,
+				28SYNC003301FFAC600DEAD25 /* App */,
 			);
 			name = Voicefinder;
 			packageProductDependencies = (
 				282E37DE3020031F00944A84 /* WhisperKit */,
+				28PKG020301FMLX000000020 /* MLXLLM */,
+				28PKG021301FMLX000000021 /* MLXLMCommon */,
+				28PKG022301FSHERPA00000022 /* SherpaOnnx */,
 			);
 			productName = Voicefinder;
 			productReference = 28B00E4C301FEDDE00DEAD24 /* Voicefinder.app */;
@@ -300,7 +341,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2630;
-				LastUpgradeCheck = 2630;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					28B00E4B301FEDDD00DEAD24 = {
 						CreatedOnToolsVersion = 26.3;
@@ -327,6 +368,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				282E37DD3020031F00944A84 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				28PKG001301FMLX000000001 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				28PKG002301FSHERPA0000002 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 28B00E4D301FEDDE00DEAD24 /* Products */;
@@ -346,6 +389,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				282E37E5302006E700944A84 /* sample.m4a in Resources */,
+				282E37E93020105800944A85 /* Models in Resources */,
 				28B00E54301FEDEE00DEAD24 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -371,11 +415,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28B00E52301FEDDE00DEAD24 /* ContentView.swift in Sources */,
-				282E37E73020085300944A84 /* SpeechToTextEngine.swift in Sources */,
 				28B00E50301FEDDE00DEAD24 /* VoicefinderApp.swift in Sources */,
-				282E37E6302007EB00944A84 /* WhisperKitTranscriber.swift in Sources */,
-				282E37EA3020108000944A84 /* WhisperKitModelProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -414,6 +454,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -468,6 +509,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -478,6 +520,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -525,6 +568,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -736,6 +780,22 @@
 				kind = branch;
 			};
 		};
+		28PKG001301FMLX000000001 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 2.31.3;
+			};
+		};
+		28PKG002301FSHERPA0000002 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/uakihir0/sherpa-onnx-spm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 1.13.3;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -743,6 +803,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 282E37DD3020031F00944A84 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
+		};
+		28PKG020301FMLX000000020 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 28PKG001301FMLX000000001 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		28PKG021301FMLX000000021 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 28PKG001301FMLX000000001 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		28PKG022301FSHERPA00000022 /* SherpaOnnx */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 28PKG002301FSHERPA0000002 /* XCRemoteSwiftPackageReference "sherpa-onnx-spm" */;
+			productName = SherpaOnnx;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

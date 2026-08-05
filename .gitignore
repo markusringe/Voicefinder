@@ -1,0 +1,39 @@
+# Xcode / Swift
+DerivedData/
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+xcuserdata/
+*.xcscmblueprint
+
+# Build-Artefakte
+.build/
+build/
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python / Setup-Venvs (Kokoro-Skripte)
+.venv/
+__pycache__/
+*.pyc
+
+# Geheimnisse – nie committen
+.env
+.env.*
+*.pem
+Secrets.plist
+
+# Große LLM-Gewichte (> GitHub 100 MB Limit) – via Scripts/setup-llm-bundle.sh laden
+Resources/Models/qwen3-1.7B-4bit/
+
+# Lokale Xcode-Schemes (optional persönlich)
+*.xcscheme
+!Voicefinder.xcodeproj/xcshareddata/xcschemes/*.xcscheme
