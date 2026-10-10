@@ -55,9 +55,13 @@ enum AppMemoryCoordinator: Sendable {
         #endif
     }
 
-    /// Piper nach TTS entladen – nur bei aktivem Speicherdruck, sonst schnelleres Folge-TTS.
+    /// Piper nach TTS entladen – auf dem Gerät immer (MLX in der nächsten Runde), im Simulator nur unter Druck.
     nonisolated static var shouldUnloadPiperAfterTTS: Bool {
+        #if targetEnvironment(simulator)
         shouldReduceMemoryUse
+        #else
+        true
+        #endif
     }
 
     /// Wird bei iOS-Speicherwarnung aufgerufen.

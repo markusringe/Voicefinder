@@ -43,6 +43,10 @@ actor ConversationOrchestrator {
     /// Verhindert doppelte Pipeline-Starts für denselben Satz.
     private var lastSubmittedUtterance: String = ""
     private var lastSubmittedAt: Date = .distantPast
+    /// Laufende Nutzeräußerung – blockiert parallele Pipeline für denselben Inhalt.
+    private var inFlightUtteranceKey: String?
+    /// Verhindert parallele TTS-Ausgabe (Echo/Doppel-Pipeline).
+    private var isDeliveringAssistantSpeech = false
     /// True, sobald während WhisperKit-Aufnahme Sprachenergie erkannt wurde.
     private var speechEnergyDetected = false
     /// STT ist pausiert während LLM/TTS – verhindert Echo-Rückkopplung.
@@ -169,6 +173,8 @@ actor ConversationOrchestrator {
         latestPartialUtterance = ""
         lastSubmittedUtterance = ""
         lastSubmittedAt = .distantPast
+        inFlightUtteranceKey = nil
+        isDeliveringAssistantSpeech = false
         preparedConversationOpeningText = nil
         conversationOpeningDelivered = false
         uiNotifyScheduled = false
@@ -417,6 +423,8 @@ actor ConversationOrchestrator {
 
     /// Stille nach dem letzten Partial, bevor der Satz als fertig gilt (Apple Speech liefert oft keine Finals).
     private static let utteranceSilenceNanoseconds: UInt64 = 850_000_000
+    /// Fallback auf dem Gerät, wenn Apple Speech kein Final liefert.
+    private static let appleSpeechFinalFallbackNanoseconds: UInt64 = 2_500_000_000
     /// Mindest-Pegel, ab dem gesprochene Sprache für WhisperKit-Pausenerkennung zählt.
     private static let speechEnergyThreshold: Float = 0.08
     /// Gleicher Satz wird innerhalb dieses Fensters nicht erneut gestartet.
@@ -434,10 +442,33 @@ actor ConversationOrchestrator {
             partialText = trimmed
             setState(.transcribing(partialText: trimmed))
             if stopFinalizingSpeechEngine == nil {
+                #if targetEnvironment(simulator)
                 scheduleUtteranceEndDetection(for: trimmed)
+                #else
+                // Gerät: primär auf Apple-Speech-Finals warten – Partial-Timer nur als Fallback.
+                scheduleAppleSpeechFinalFallback(for: trimmed)
+                #endif
             }
         default:
             break
+        }
+    }
+
+    /// Fallback, wenn Apple Speech auf dem Gerät kein finales Segment sendet.
+    private func scheduleAppleSpeechFinalFallback(for text: String) {
+        if text == latestPartialUtterance, utteranceEndTask != nil {
+            return
+        }
+
+        latestPartialUtterance = text
+        utteranceEndTask?.cancel()
+        utteranceEndTask = Task {
+            try? await Task.sleep(nanoseconds: Self.appleSpeechFinalFallbackNanoseconds)
+            guard !Task.isCancelled else { return }
+            guard self.isListening, !self.isSTTSuspended, !self.isMicrophoneMutedByUser else { return }
+            guard !self.isPipelineActive else { return }
+            guard self.latestPartialUtterance == text else { return }
+            await self.submitDetectedUtterance(text)
         }
     }
 
@@ -540,6 +571,10 @@ actor ConversationOrchestrator {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else { return }
         guard isListening else { return }
+
+        let utteranceKey = ResponseSanitizer.normalizeForComparison(trimmed)
+        guard !utteranceKey.isEmpty else { return }
+
         if isPipelineActive {
             await interruptActivePipeline(keepListening: true)
         }
@@ -550,24 +585,36 @@ actor ConversationOrchestrator {
         }
 
         let now = Date()
-        if trimmed == lastSubmittedUtterance,
+        if utteranceKey == inFlightUtteranceKey {
+            NSLog("[Voicefinder] Pipeline läuft bereits für diese Äußerung – ignoriert.")
+            return
+        }
+        if utteranceKey == ResponseSanitizer.normalizeForComparison(lastSubmittedUtterance),
            now.timeIntervalSince(lastSubmittedAt) < Self.utteranceDedupInterval {
             return
         }
 
         lastSubmittedUtterance = trimmed
         lastSubmittedAt = now
+        inFlightUtteranceKey = utteranceKey
 
         NSLog("[Voicefinder] Pipeline-Start: %@", trimmed)
         utteranceEndTask?.cancel()
         pipelineTask?.cancel()
         pipelineTask = Task {
             await self.processUserText(trimmed)
+            if self.inFlightUtteranceKey == utteranceKey {
+                self.inFlightUtteranceKey = nil
+            }
         }
     }
 
     private func applyFinalTranscript(_ finalText: String) async {
         guard !isSTTSuspended, !isMicrophoneMutedByUser else { return }
+
+        // Partial-Fallback-Timer abbrechen – Final hat Vorrang.
+        utteranceEndTask?.cancel()
+        utteranceEndTask = nil
 
         partialText = finalText
         notifyObservers()
@@ -709,6 +756,13 @@ actor ConversationOrchestrator {
 
     /// Speichert Assistenten-Antwort, spricht sie vor und setzt den Zustand zurück.
     private func deliverAssistantResponse(_ finalResponse: String, userText: String) async {
+        guard !isDeliveringAssistantSpeech else {
+            NSLog("[Voicefinder] TTS bereits aktiv – doppelte Sprachausgabe verhindert.")
+            return
+        }
+        isDeliveringAssistantSpeech = true
+        defer { isDeliveringAssistantSpeech = false }
+
         let spokenText = ResponseSanitizer.deduplicatedForSpeech(finalResponse)
         if spokenText != finalResponse {
             NSLog("[Voicefinder] Doppelte Formulierung in Antwort entfernt.")
@@ -920,13 +974,25 @@ actor ConversationOrchestrator {
         return polished
     }
 
-    /// Spricht den vollständigen Text Satz für Satz vor – ohne Kürzung mitten im Satz.
+    /// Maximale Zeichen für eine einzelne Piper-Synthese – darüber Satz für Satz.
+    private static let singleSpeakCharacterLimit = 320
+
+    /// Spricht Antworttext vor – typische Antworten in einem Stück (kein Doppel-Audio durch Satz-Splitting).
     private func speakResponseText(_ text: String) async throws {
         SpeechDeliveryCoordinator.begin()
         defer { SpeechDeliveryCoordinator.end() }
 
+        let trimmed = ResponseSanitizer.deduplicatedForSpeech(text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if trimmed.count <= Self.singleSpeakCharacterLimit {
+            try await textToSpeechEngine.speak(text: trimmed)
+            return
+        }
+
         let sentences = ResponseSanitizer.deduplicateSentences(
-            ResponseSanitizer.sentencesForSpeech(text)
+            ResponseSanitizer.sentencesForSpeech(trimmed)
         )
         guard !sentences.isEmpty else { return }
 
@@ -1016,7 +1082,7 @@ actor ConversationOrchestrator {
 
         brainEnrichmentTask?.cancel()
         brainEnrichmentTask = Task {
-            try? await Task.sleep(for: .seconds(8))
+            try? await Task.sleep(for: .seconds(12))
             guard !Task.isCancelled else { return }
             await enrichAndApplyBrain(from: message)
         }

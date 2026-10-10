@@ -208,8 +208,6 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
         loadedVoiceID = nil
     }
 
-    // MARK: - Intern
-
     private func performSpeak(_ trimmed: String) async throws {
         try Task.checkCancellation()
         try await prepareIfNeeded()

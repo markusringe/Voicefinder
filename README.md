@@ -105,6 +105,16 @@ Stimmen: `Resources/Models/piper-de/voices/`
 3. Auf **echtes iPhone** deployen (empfohlen für beste Qualität)
 4. Mikrofon-Berechtigung erlauben
 
+### MLX / Xcode 26: Metal-Warnungen `constexpr if`
+
+Unter Xcode 26 kann das Swift-Paket **Cmlx** (MLX) harmlose Metal-Warnungen zu C++17 ausgeben. Das Projekt patcht das automatisch **vor jedem Build** (Scheme Pre-Action + `Scripts/patch-mlx-metal-warnings.sh`).
+
+Nach **Reset Package Caches** oder neuem Clone einmal ausführen:
+
+```bash
+./Scripts/reset-spm.sh
+```
+
 ---
 
 ## Projektstruktur
