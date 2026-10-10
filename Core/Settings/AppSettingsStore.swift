@@ -61,6 +61,9 @@ enum AppSettingsStore {
     /// Gewählte Suchmaschine (`WebSearchEngine.rawValue`).
     nonisolated static let webSearchEngineKey = "voicefinder.webSearchEngine"
 
+    /// Frühes Sprechen: erster Satz wird vorgelesen, während das LLM noch generiert.
+    nonisolated static let earlySpeechEnabledKey = "voicefinder.earlySpeechEnabled"
+
     /// True, wenn die KI vor Antworten im Web recherchieren darf (Standard: aus – nur bei Bedarf).
     nonisolated static var internetEnabled: Bool {
         get {
@@ -71,6 +74,20 @@ enum AppSettingsStore {
         }
         set {
             UserDefaults.standard.set(newValue, forKey: internetEnabledKey)
+        }
+    }
+
+    /// True, wenn der erste Satz schon während der LLM-Generierung gesprochen werden darf (Standard: an).
+    /// Greift nur auf Geräten mit genug RAM – siehe `AppMemoryCoordinator.allowsConcurrentLLMAndTTS`.
+    nonisolated static var earlySpeechEnabled: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: earlySpeechEnabledKey) == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: earlySpeechEnabledKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: earlySpeechEnabledKey)
         }
     }
 

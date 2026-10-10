@@ -12,7 +12,8 @@ import Testing
 // MARK: - Test-Doubles
 
 /// STT-Mock ohne echtes Mikrofon; liefert steuerbare Transkript-Streams.
-actor MockSpeechToTextEngine: SpeechToTextEngine {
+@MainActor
+final class MockSpeechToTextEngine: SpeechToTextEngine {
     private(set) var partialTextStream: AsyncStream<String>
     private(set) var finalTextStream: AsyncStream<String>
     private(set) var audioLevelStream: AsyncStream<Float>
@@ -100,8 +101,37 @@ struct MockLanguageEngine: LanguageEngine, Sendable {
     }
 }
 
+/// LLM-Mock, der seine Antwort in Teilen mit Pausen streamt (wie MLX Token für Token).
+struct ChunkedMockLanguageEngine: LanguageEngine, Sendable {
+    let chunks: [String]
+    let delayNanoseconds: UInt64
+
+    nonisolated func reply(
+        to text: String,
+        context: [ChatTurn],
+        options: LanguageReplyOptions
+    ) async throws -> AsyncStream<String> {
+        _ = text
+        _ = context
+        _ = options
+        let chunks = chunks
+        let delay = delayNanoseconds
+        return AsyncStream { continuation in
+            let task = Task {
+                for chunk in chunks {
+                    try? await Task.sleep(nanoseconds: delay)
+                    continuation.yield(chunk)
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
 /// TTS-Mock protokolliert gesprochene Texte und simuliert Ausgabe-Laufzeit.
-actor MockTextToSpeechEngine: TextToSpeechEngine {
+@MainActor
+final class MockTextToSpeechEngine: TextToSpeechEngine {
     private(set) var spokenTexts: [String] = []
     private(set) var stopCount = 0
     private let speakDelayNanoseconds: UInt64
@@ -140,6 +170,7 @@ actor MockTextToSpeechEngine: TextToSpeechEngine {
 
 // MARK: - Tests
 
+@MainActor
 struct ConversationOrchestratorTests {
 
     @Test
@@ -165,8 +196,9 @@ struct ConversationOrchestratorTests {
         #expect(turns.first?.role == .user)
         #expect(turns.first?.text == "Hallo")
         #expect(turns.last?.role == .assistant)
-        #expect(turns.last?.text == "Testantwort")
-        #expect(spoken == ["Testantwort"])
+        // Sanitizer ergänzt fehlendes Satzzeichen am Ende.
+        #expect(turns.last?.text == "Testantwort.")
+        #expect(spoken == ["Testantwort."])
     }
 
     @Test
@@ -210,13 +242,15 @@ struct ConversationOrchestratorTests {
         }
 
         try await Task.sleep(nanoseconds: 500_000_000)
+        // Jede neue Runde stoppt vorsorglich alte TTS – erst danach zählen.
+        let stopCountWhileSpeaking = await tts.stopCount
 
         // Während TTS ist STT pausiert – Partials sollen TTS nicht abbrechen (kein Echo-Barge-in).
         await speech.emitPartial("Unterbrechung")
         try await Task.sleep(nanoseconds: 200_000_000)
 
         let stopCount = await tts.stopCount
-        #expect(stopCount == 0)
+        #expect(stopCount == stopCountWhileSpeaking)
 
         await orchestrator.stopListening()
     }
@@ -241,13 +275,70 @@ struct ConversationOrchestratorTests {
         }
 
         try await Task.sleep(nanoseconds: 500_000_000)
+        let stopCountWhileSpeaking = await tts.stopCount
 
         await speech.emitPartial("Hi")
         try await Task.sleep(nanoseconds: 200_000_000)
 
         let stopCount = await tts.stopCount
-        #expect(stopCount == 0)
+        #expect(stopCount == stopCountWhileSpeaking)
 
         await orchestrator.stopListening()
+    }
+
+    @Test
+    func fruehesSprechen_ersterSatzVorStreamEnde() async throws {
+        let tts = MockTextToSpeechEngine(speakDelayNanoseconds: 50_000_000)
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: MockSpeechToTextEngine(),
+                languageEngine: ChunkedMockLanguageEngine(
+                    chunks: ["Das ist eine gute Frage.", " Ich erkläre", " es dir gern kurz."],
+                    delayNanoseconds: 300_000_000
+                ),
+                textToSpeechEngine: tts
+            )
+        )
+
+        await orchestrator.submitUserText("Wie funktioniert das?")
+
+        // Nach dem zweiten Chunk steht der erste Satz fest, der Stream läuft aber noch.
+        try await Task.sleep(nanoseconds: 750_000_000)
+        let spokenWhileStreaming = await tts.spokenTexts
+        #expect(spokenWhileStreaming == ["Das ist eine gute Frage."])
+
+        try await Task.sleep(nanoseconds: 700_000_000)
+        let spoken = await tts.spokenTexts
+        let turns = await orchestrator.turns
+        let state = await orchestrator.state
+
+        #expect(spoken == ["Das ist eine gute Frage.", "Ich erkläre es dir gern kurz."])
+        #expect(turns.last?.text == "Das ist eine gute Frage. Ich erkläre es dir gern kurz.")
+        #expect(state == .idle)
+    }
+
+    @Test
+    func fruehesSprechen_unterbrechungStopptErstenSatz() async throws {
+        let tts = MockTextToSpeechEngine(speakDelayNanoseconds: 5_000_000_000)
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: MockSpeechToTextEngine(),
+                languageEngine: ChunkedMockLanguageEngine(
+                    chunks: ["Das ist eine gute Frage.", " Ich erkläre", " es dir gern kurz."],
+                    delayNanoseconds: 200_000_000
+                ),
+                textToSpeechEngine: tts
+            )
+        )
+
+        await orchestrator.submitUserText("Wie funktioniert das?")
+        try await Task.sleep(nanoseconds: 550_000_000)
+        await orchestrator.interruptSpeaking()
+        try await Task.sleep(nanoseconds: 600_000_000)
+
+        let spoken = await tts.spokenTexts
+        let stopCount = await tts.stopCount
+        #expect(spoken == ["Das ist eine gute Frage."])
+        #expect(stopCount >= 1)
     }
 }

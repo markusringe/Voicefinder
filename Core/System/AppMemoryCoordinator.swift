@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 /// Globale Speicher-Steuerung – verhindert gleichzeitig MLX, Piper und Hintergrund-LLM.
 enum AppMemoryCoordinator: Sendable {
@@ -46,21 +47,44 @@ enum AppMemoryCoordinator: Sendable {
         _shouldReduceMemoryUse
     }
 
-    /// Piper vor MLX entladen – auf dem Gerät immer (MLX ~1,7 GB), im Simulator nur unter Druck.
+    /// Mindest-RAM des Geräts, ab dem MLX und Piper gleichzeitig geladen sein dürfen.
+    private nonisolated static let concurrentModelsMinimumPhysicalMemory: UInt64 = 6 * 1024 * 1024 * 1024
+
+    /// Mindest-Restspeicher des Prozesses (Jetsam-Limit) für Piper neben MLX.
+    private nonisolated static let concurrentModelsMinimumAvailableMemory = 500 * 1024 * 1024
+
+    /// True, wenn MLX-Generierung und Piper-TTS gleichzeitig laufen dürfen (frühes Sprechen).
+    /// Nur auf Geräten mit ≥ 6 GB RAM, ohne Speicherwarnung und mit genug Restspeicher.
+    nonisolated static var allowsConcurrentLLMAndTTS: Bool {
+        guard !shouldReduceMemoryUse else { return false }
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        guard ProcessInfo.processInfo.physicalMemory >= concurrentModelsMinimumPhysicalMemory else { return false }
+        return os_proc_available_memory() >= concurrentModelsMinimumAvailableMemory
+        #endif
+    }
+
+    /// Piper bleibt zwischen Runden geladen, wenn frühes Sprechen aktiv ist und der Speicher reicht.
+    nonisolated static var keepsPiperResident: Bool {
+        AppSettingsStore.earlySpeechEnabled && allowsConcurrentLLMAndTTS
+    }
+
+    /// Piper vor MLX entladen – auf dem Gerät immer (MLX ~1,7 GB), außer Piper darf resident bleiben.
     nonisolated static var shouldUnloadPiperBeforeLLM: Bool {
         #if targetEnvironment(simulator)
         shouldReduceMemoryUse
         #else
-        true
+        !keepsPiperResident
         #endif
     }
 
-    /// Piper nach TTS entladen – auf dem Gerät immer (MLX in der nächsten Runde), im Simulator nur unter Druck.
+    /// Piper nach TTS entladen – auf dem Gerät immer (MLX in der nächsten Runde), außer Piper darf resident bleiben.
     nonisolated static var shouldUnloadPiperAfterTTS: Bool {
         #if targetEnvironment(simulator)
         shouldReduceMemoryUse
         #else
-        true
+        !keepsPiperResident
         #endif
     }
 

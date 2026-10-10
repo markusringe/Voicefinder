@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import MLX
 import MLXLLM
 import MLXLMCommon
 
@@ -56,6 +57,10 @@ actor MLXChatService {
 
     /// Qwen3: Thinking-Modus abschalten – sonst englische Reasoning-Texte statt Dialog.
     private static let qwenChatContext: [String: any Sendable] = ["enable_thinking": false]
+
+    /// Obergrenze für den MLX-Puffer-Cache – ohne Limit wächst er über Runden und löst iOS-Speicherwarnungen aus,
+    /// besonders wenn Piper für frühes Sprechen parallel geladen bleibt.
+    private static let gpuCacheLimitBytes = 128 * 1024 * 1024
 
     private init() {}
 
@@ -129,6 +134,7 @@ actor MLXChatService {
         do {
             try LLMModelProvider.validateModelDirectory(modelURL)
             let configuration = ModelConfiguration(directory: modelURL)
+            Memory.cacheLimit = Self.gpuCacheLimitBytes
             modelContainer = try await LLMModelFactory.shared.loadContainer(
                 configuration: configuration
             )
