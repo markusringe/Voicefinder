@@ -817,6 +817,10 @@ actor ConversationOrchestrator {
         notifyObservers()
         setState(.speaking(responseText: spokenText))
 
+        #if DEBUG
+        // Nur Debug: Antworttext für Qualitätsvergleiche (z. B. mit/ohne Prompt-Cache) – nie in Release-Logs.
+        NSLog("[Voicefinder] Antwort (Debug): %@", spokenText)
+        #endif
         NSLog("[Voicefinder] TTS startet (%d Zeichen) …", textToSpeak.count)
         do {
             if let earlySpeechTask {
