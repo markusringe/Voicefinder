@@ -457,162 +457,62 @@ struct UserBrainProfile: Codable, Sendable, Equatable {
         lastUpdated = Date()
     }
 
-    /// Prompt-Block mit bekannten Nutzerinfos für das LLM.
+    /// Bekannte Nutzerinfos als eine Zeile für das LLM.
     nonisolated func profilePromptBlock() -> String? {
         var working = self
         _ = working.syncStandardFieldsFromEntries()
         guard working.hasAnyData else { return nil }
 
-        var lines: [String] = []
+        var facts: [String] = []
         for field in UserBrainField.allCases {
             let value = working.resolvedValue(for: field)
             if !value.isEmpty {
-                lines.append("\(field.displayName): \(value)")
+                facts.append("\(field.displayName): \(value)")
             }
         }
 
         for entry in working.entries where !entry.label.isEmpty && !entry.value.isEmpty {
             if UserBrainField.matchingField(forLabel: entry.label) != nil { continue }
-            lines.append("\(entry.label): \(entry.value)")
+            facts.append("\(entry.label): \(entry.value)")
         }
 
-        guard !lines.isEmpty else { return nil }
-
-        return """
-        [Nutzerprofil – verbindlich, bereits gespeichert]
-        \(lines.joined(separator: "\n"))
-        Diese Fakten sind wahr. Nutze sie natürlich (z. B. Vorname ansprechen). \
-        Frage NIEMALS erneut nach Infos, die hier stehen – besonders nicht nach dem Vornamen.
-        """
+        guard !facts.isEmpty else { return nil }
+        return "Was du über deinen Gesprächspartner weißt (frag nicht erneut danach): \(facts.joined(separator: "; "))."
     }
 
-    /// Kurzliste bekannter Fakten – explizites Verbot zum Wiederholen von Fragen.
-    nonisolated func knownFactsSummary() -> String? {
+    /// Hinweis, fehlende Infos selten und beiläufig zu ergänzen – entfällt bei aktiver Rolle.
+    nonisolated func discoveryDirective() -> String? {
         var working = self
         _ = working.syncStandardFieldsFromEntries()
-        var lines: [String] = []
-        for field in UserBrainField.allCases {
-            let value = working.resolvedValue(for: field)
-            if !value.isEmpty {
-                lines.append("\(field.displayName): \(value)")
-            }
-        }
-        guard !lines.isEmpty else { return nil }
-        return lines.joined(separator: "\n")
-    }
+        guard working.resolvedMission.isEmpty else { return nil }
 
-    /// Verbindliche Anweisung zum Nutzer-Vornamen – verhindert Endlosschleifen beim Nachfragen.
-    nonisolated func userFirstNameDirective() -> String? {
-        var working = self
-        _ = working.syncStandardFieldsFromEntries()
-        let name = working.resolvedValue(for: .firstName)
-        guard !name.isEmpty else { return nil }
-        return """
-        [Nutzer-Vorname – verbindlich]
-        Der Nutzer heißt „\(name)“. Sprich ihn natürlich mit „\(name)“ an, wenn es passt.
-        Frage NIEMALS nach seinem Namen, Vornamen oder „wie ich dich nennen soll“.
-        """
-    }
-
-    /// Anweisung: fehlende Infos nebenbei sammeln – ohne Formular-Ton und ohne Endlosschleifen.
-    nonisolated func discoveryDirective() -> String {
-        var working = self
-        _ = working.syncStandardFieldsFromEntries()
-
-        // Bei aktivem Rollen-Auftrag kein Profil-Sammeln – verhindert Ablenkung und Schleifen.
-        if !working.resolvedMission.isEmpty {
-            return """
-            [Profil im Gespräch]
-            Rollen-Gespräch aktiv – kein Profil-Sammeln, keine Formular-Fragen.
-            Antworte nur auf die aktuelle Äußerung des Gesprächspartners.
-            """
-        }
-
-        let missing = working.missingFields()
         let userNameKnown = !working.resolvedValue(for: .firstName).isEmpty
-
-        var text = """
-        [Profil im Gespräch]
-        Merke dir Neues aus dem Gespräch (Alltag, Vorlieben, Beruf) – landet im KI-Gehirn.
-        """
-
-        if let known = working.knownFactsSummary() {
-            text += """
-
-            Bereits bekannt – nicht erneut erfragen:
-            \(known)
-            """
-        }
-
-        if missing.isEmpty {
-            text += """
-
-            Das Profil reicht für den Alltag. Kein aktives Nachfragen nötig.
-            """
-        } else {
-            // Vorname nie als „offenes Feld“ listen, wenn er schon bekannt ist.
-            let missingForPrompt = missing.filter { field in
-                !(field == .firstName && userNameKnown)
-            }
-            let priority = missingForPrompt.prefix(2).map(\.displayName).joined(separator: ", ")
-            if priority.isEmpty {
-                text += """
-
-                Profil ist ausreichend. Keine Profil-Fragen stellen.
-                """
-            } else {
-                text += """
-
-                Optional noch offen (nur \(priority)) – höchstens selten und unaufdringlich ergänzen:
-                - Nicht in jeder Antwort nachfragen; oft lieber gar keine Profil-Frage
-                - Nie Formular-Ton („Wie heißt du?“, „Wie darf ich dich nennen?“)
-                - Erst die Nutzerfrage beantworten; Profil-Frage nur wenn sie natürlich passt
-                - Wenn ein Name im Profil steht: diesen nutzen, nie erneut nach dem Namen fragen
-                """
-            }
-        }
-
-        return text
+        let missing = working.missingFields()
+            .filter { !($0 == .firstName && userNameKnown) }
+            .prefix(2)
+            .map(\.displayName)
+        guard !missing.isEmpty else { return nil }
+        return "Wenn es sich ergibt, darfst du selten und beiläufig nach \(missing.joined(separator: " oder ")) fragen."
     }
 
     /// KI-Namen für den System-Prompt (falls gesetzt).
     nonisolated func assistantNameDirective() -> String? {
         let name = assistantName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { return nil }
-        return """
-        [Dein Name – verbindlich]
-        Du heißt „\(name)“. Bei Fragen nach deinem Namen antworte natürlich mit „\(name)“ oder „Ich heiße \(name)“.
-        """
+        return "Du heißt \(name)."
     }
 
-    /// Regeln für laufendes Rollen-Gespräch – verhindert Wiederholungen und App-Bezug.
+    /// Verhalten im Rollen-Gespräch – in einem Satz.
     nonisolated func missionConversationDirective() -> String? {
         guard !resolvedMission.isEmpty else { return nil }
-        return """
-        [Rollen-Gespräch – verbindlich]
-        Du bist mitten im Gespräch in deiner Rolle – kein Neustart, keine Wiederholung deiner Einleitung.
-        Wenn du Termin, Rolle oder Anliegen schon genannt hast: nicht nochmal sagen.
-        Der Gesprächspartner ist ein Mensch – nie App, Software, KI, Computer oder Voicefinder erwähnen.
-        Wiederhole nie denselben Satz oder dasselbe Skript wie in deiner letzten Antwort.
-        Keine leeren Bestätigungen wie „Alles klar“, „Verstanden“ oder „Okay“ allein – \
-        immer auf den Nutzer eingehen und mit einer echten Folgefrage weitermachen.
-        Bei Fragen: kurz und menschlich antworten, dann wenn passend nachfragen – nicht das Rollen-Skript von vorne spielen.
-        Erfinde keine Uhrzeiten, Termine oder konkreten Zahlen, die der Nutzer nicht genannt hat.
-        """
+        return "Bleib in deiner Rolle und erwähne nie, dass du eine App oder KI bist."
     }
 
     /// Auftrag für das LLM – beschreibt die Rolle der KI, nicht den Gesprächspartner.
     nonisolated func missionDirective() -> String? {
         let text = resolvedMission
         guard !text.isEmpty else { return nil }
-        return """
-        [Deine Rolle – verbindlich, nur intern]
-        Du nimmst in diesem Gespräch folgende Rolle ein: \(text)
-        Das ist DEINE Rolle – nicht die Identität oder die Daten des Gesprächspartners.
-        Stelle die Rolle nur einmal zu Beginn vor – danach nicht wiederholen.
-        Vermische die Rolle nicht mit Nutzer-Profilinfos. Sprich die Rolle nie wörtlich als Regie aus \
-        (kein „Mein Auftrag ist…“, kein „Intermezzo“, keine Regieanweisungen).
-        """
+        return "Deine Rolle in diesem Gespräch: \(text) Stell sie höchstens einmal kurz vor."
     }
 
     /// Prompt-Kontext nur für Rollen/Auftrag – ohne Nutzer-Profil (Gesprächseröffnung).
@@ -622,11 +522,7 @@ struct UserBrainProfile: Codable, Sendable, Equatable {
             assistantNameDirective: assistantNameDirective(),
             profilePromptBlock: nil,
             resolvedCity: nil,
-            discoveryDirective: """
-            [Rollen-Gespräch]
-            Sprich nur natürliche Dialogsätze wie ein echter Mensch. Keine Meta-Kommentare, kein App-Bezug.
-            Stelle deine Rolle nur einmal vor – nicht wiederholen.
-            """,
+            discoveryDirective: nil,
             userFirstName: nil,
             userFirstNameDirective: nil,
             mission: resolvedMission.isEmpty ? nil : resolvedMission,
@@ -649,7 +545,8 @@ struct UserBrainProfile: Codable, Sendable, Equatable {
             resolvedCity: city.isEmpty ? nil : city,
             discoveryDirective: working.discoveryDirective(),
             userFirstName: firstName.isEmpty ? nil : firstName,
-            userFirstNameDirective: working.userFirstNameDirective(),
+            // Vorname steht im Profil-Satz – kein eigener Block mehr.
+            userFirstNameDirective: nil,
             mission: missionText.isEmpty ? nil : missionText,
             missionDirective: working.missionDirective(),
             missionConversationDirective: working.missionConversationDirective()
