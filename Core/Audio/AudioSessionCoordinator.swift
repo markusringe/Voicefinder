@@ -89,11 +89,12 @@ actor AudioSessionCoordinator {
 
         switch profile {
         case .conversation:
-            // Ein Modus für Zuhören und Sprechen – `.measurement` würde die Lautsprecher-Ausgabe dämpfen,
-            // `.spokenAudio` taugt nicht für Aufnahme.
+            // Ein Modus für Zuhören und Sprechen. `.measurement` schaltet die automatische Verstärkung ab –
+            // mit `.default` regelt die AGC in Sprechpausen das Raumrauschen über die Stille-Schwelle
+            // (Pegel blieb ~1,5 s bei 0,03–0,05), und die Satzende-Erkennung griff nicht.
             try session.setCategory(
                 .playAndRecord,
-                mode: .default,
+                mode: .measurement,
                 options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
             )
 

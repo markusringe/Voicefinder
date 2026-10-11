@@ -1,0 +1,9 @@
+# Eine Äußerung pro Zeile. Zeilen mit # werden ignoriert.
+Hallo
+Mir geht's gut
+Welcher Wochentag ist heute?
+Welche Jahreszeit haben wir?
+Was ist die Hauptstadt von Australien?
+Wie viele Beine hat eine Spinne?
+Wer war Franz Beckenbauer?
+Danke, das war's schon.
