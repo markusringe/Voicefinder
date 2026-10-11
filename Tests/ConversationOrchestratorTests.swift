@@ -341,4 +341,110 @@ struct ConversationOrchestratorTests {
         #expect(spoken == ["Das ist eine gute Frage."])
         #expect(stopCount >= 1)
     }
+
+    /// Simuliert Mikrofonpegel im Takt eines Audio-Taps (~20 ms pro Puffer).
+    private func emitLevels(_ speech: MockSpeechToTextEngine, level: Float, duration: Duration) async throws {
+        let clock = ContinuousClock()
+        let end = clock.now + duration
+        while clock.now < end {
+            speech.emitLevel(level)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    @Test
+    func stilleNachSprache_beendetAeusserungVorDemFallback() async throws {
+        let speech = MockSpeechToTextEngine()
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: speech,
+                languageEngine: MockLanguageEngine(response: "Acht Beine."),
+                textToSpeechEngine: MockTextToSpeechEngine(speakDelayNanoseconds: 50_000_000)
+            )
+        )
+        try await orchestrator.startListening()
+
+        try await emitLevels(speech, level: 0.1, duration: .milliseconds(300))
+        speech.emitPartial("Wie viele Beine hat eine Spinne?")
+        try await emitLevels(speech, level: 0.1, duration: .milliseconds(200))
+        try await emitLevels(speech, level: 0.001, duration: .milliseconds(1400))
+
+        // 2,5-s-Fallback wäre noch nicht abgelaufen – nur die Stille-Erkennung kann die Pipeline gestartet haben.
+        let turns = await orchestrator.turns
+        #expect(turns.first?.text == "Wie viele Beine hat eine Spinne?")
+
+        await orchestrator.stopListening()
+    }
+
+    @Test
+    func kurzePauseImSatz_beendetAeusserungNicht() async throws {
+        let speech = MockSpeechToTextEngine()
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: speech,
+                languageEngine: MockLanguageEngine(response: "Acht Beine."),
+                textToSpeechEngine: MockTextToSpeechEngine(speakDelayNanoseconds: 50_000_000)
+            )
+        )
+        try await orchestrator.startListening()
+
+        try await emitLevels(speech, level: 0.1, duration: .milliseconds(300))
+        speech.emitPartial("Wie viele Beine")
+        try await emitLevels(speech, level: 0.001, duration: .milliseconds(600))
+        try await emitLevels(speech, level: 0.1, duration: .milliseconds(300))
+        speech.emitPartial("Wie viele Beine hat eine Spinne?")
+        try await emitLevels(speech, level: 0.1, duration: .milliseconds(100))
+
+        let turns = await orchestrator.turns
+        #expect(turns.isEmpty)
+
+        await orchestrator.stopListening()
+    }
+
+    @Test
+    func kurzeAntwortMitWoertenDerFrage_istKeinEcho() async throws {
+        // Echte Sequenz vom iPhone: „Mir geht's gut“ wurde als Echo verworfen.
+        let speech = MockSpeechToTextEngine()
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: speech,
+                languageEngine: MockLanguageEngine(response: "Hallo! Wie geht's dir? Ich hoffe, du bist heute gut gestählt."),
+                textToSpeechEngine: MockTextToSpeechEngine(speakDelayNanoseconds: 50_000_000)
+            )
+        )
+        try await orchestrator.startListening()
+
+        speech.emitFinal("Hallo")
+        try await Task.sleep(for: .milliseconds(500))
+        speech.emitFinal("Mir geht's gut")
+        try await Task.sleep(for: .milliseconds(500))
+
+        let userTexts = await orchestrator.turns.filter { $0.role == .user }.map(\.text)
+        #expect(userTexts == ["Hallo", "Mir geht's gut"])
+
+        await orchestrator.stopListening()
+    }
+
+    @Test
+    func nachhallDerKIAntwort_wirdAlsEchoVerworfen() async throws {
+        let speech = MockSpeechToTextEngine()
+        let orchestrator = ConversationOrchestrator(
+            dependencies: AppDependencies(
+                speechToTextEngine: speech,
+                languageEngine: MockLanguageEngine(response: "Hallo! Wie geht's dir? Ich hoffe, du bist heute gut gestählt."),
+                textToSpeechEngine: MockTextToSpeechEngine(speakDelayNanoseconds: 50_000_000)
+            )
+        )
+        try await orchestrator.startListening()
+
+        speech.emitFinal("Hallo")
+        try await Task.sleep(for: .milliseconds(500))
+        speech.emitFinal("Ich hoffe, du bist heute gut gestählt.")
+        try await Task.sleep(for: .milliseconds(500))
+
+        let userTexts = await orchestrator.turns.filter { $0.role == .user }.map(\.text)
+        #expect(userTexts == ["Hallo"])
+
+        await orchestrator.stopListening()
+    }
 }
