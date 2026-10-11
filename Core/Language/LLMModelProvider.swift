@@ -15,13 +15,29 @@ import MLXLMCommon
 ///
 /// Bewusst 1,7B statt 4B: ~1 GB RAM statt ~3 GB – stabil auf iPhone mit 8 GB.
 enum LLMModelProvider {
-    /// Einziges Produktiv-Modell – fest im Repository und im App-Bundle verankert.
-    nonisolated static let embeddedModelFolderName = "qwen3-1.7B-4bit"
+    /// Produktiv-Modell – fest im Repository und im App-Bundle verankert.
+    nonisolated static let defaultModelFolderName = "qwen3-1.7B-4bit"
+
+    /// Aktiver Modellordner. Debug-Builds können per Launch-Argument
+    /// `-voicefinder.debug.llmModel <Ordnername>` ein anderes Modell aus `Resources/Models` testen.
+    nonisolated static var embeddedModelFolderName: String {
+        #if DEBUG
+        if let override = UserDefaults.standard.string(forKey: "voicefinder.debug.llmModel"),
+           !override.isEmpty {
+            return override
+        }
+        #endif
+        return defaultModelFolderName
+    }
 
     /// Hugging-Face-ID – nur für das Entwickler-Setup-Skript.
     nonisolated static let huggingFaceModelID = "mlx-community/Qwen3-1.7B-4bit"
 
-    nonisolated static let displayName = "Qwen3-1.7B (eingebettet)"
+    nonisolated static var displayName: String {
+        embeddedModelFolderName == defaultModelFolderName
+            ? "Qwen3-1.7B (eingebettet)"
+            : "\(embeddedModelFolderName) (Debug-Test)"
+    }
 
     nonisolated private static let modelsBundleSubdirectory = "Models"
 

@@ -37,3 +37,4 @@ Resources/Models/qwen3-1.7B-4bit/
 # Lokale Xcode-Schemes (optional persönlich)
 *.xcscheme
 !Voicefinder.xcodeproj/xcshareddata/xcschemes/*.xcscheme
+Resources/Models/dolphin3-qwen2.5-3b-4bit/
