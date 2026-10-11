@@ -191,6 +191,22 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
 
     /// Setzt Aufnahme und Erkennung nach TTS fort – ohne neue AsyncStreams (Orchestrator behält Consumer).
     func resumeStreaming() async throws {
+        // Engine läuft noch (Gesprächsprofil): sofort zuhören, erst danach den Modus umschalten –
+        // `setMode` dauert ~300 ms, in denen sonst die ersten Wörter verloren gingen.
+        if let audioEngine, audioEngine.isRunning, isTapInstalled {
+            liveRecognition.setPaused(false)
+            try startRecognitionSession()
+            #if DEBUG
+            NSLog("[Voicefinder] STT bereit (Resume).")
+            #endif
+            do {
+                try await AudioSessionCoordinator.shared.activateRecording()
+            } catch {
+                throw AppleSpeechTranscriberError.audioSessionFailed(error.localizedDescription)
+            }
+            return
+        }
+
         do {
             try await AudioSessionCoordinator.shared.activateRecording()
         } catch {
@@ -240,6 +256,11 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
         if audioEngine.isRunning, isTapInstalled {
             return
         }
+        #if DEBUG
+        if isTapInstalled {
+            NSLog("[Voicefinder] Mic-Engine lief nicht mehr – Neustart.")
+        }
+        #endif
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         #if DEBUG

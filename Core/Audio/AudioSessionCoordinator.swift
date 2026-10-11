@@ -48,8 +48,11 @@ actor AudioSessionCoordinator {
     }
 
     /// Aktiviert die Session für Mikrofon-Eingabe (Apple Speech).
+    ///
+    /// Zuhören in `.measurement`: ohne automatische Verstärkung – mit `.default` regelte die AGC in Sprechpausen
+    /// das Raumrauschen ~1,5 s lang über die Stille-Schwelle, und die Satzende-Erkennung griff nicht.
     func activateRecording() async throws {
-        try await applyProfile(.conversation)
+        try await applyConversation(mode: .measurement)
     }
 
     /// Nur Aufnahme (WhisperKit-Recorder) – weniger Audio-HAL-Stress im Simulator als `.playAndRecord`.
@@ -62,7 +65,12 @@ actor AudioSessionCoordinator {
     /// Nutzt `.playAndRecord` + Lautsprecher statt reiner `.playback`-Kategorie, damit der Wechsel
     /// von STT zu TTS keinen `!pri`-Fehler (InsufficientPriority) auslöst und die Stimme hörbar bleibt.
     func activatePlayback() async throws {
-        try await applyProfile(bargeInEnabled ? .bargeInPlayback : .conversation)
+        if bargeInEnabled {
+            try await applyProfile(.bargeInPlayback)
+        } else {
+            // Sprechen in `.spokenAudio` – `.measurement` dämpft die Lautsprecher-Ausgabe deutlich.
+            try await applyConversation(mode: .spokenAudio)
+        }
     }
 
     /// Deaktiviert die Session, z. B. beim vollständigen Stoppen des Mikrofons.
@@ -71,6 +79,20 @@ actor AudioSessionCoordinator {
     }
 
     // MARK: - Intern
+
+    /// Gesprächsprofil mit Modus je Phase. Nur `setMode` auf der aktiven Session – kein Deaktivieren,
+    /// damit das Mikrofon nach der Antwort sofort wieder zuhört.
+    private func applyConversation(mode: AVAudioSession.Mode) async throws {
+        try await applyProfile(.conversation)
+        let session = AVAudioSession.sharedInstance()
+        guard session.mode != mode else { return }
+
+        let start = CFAbsoluteTimeGetCurrent()
+        try session.setMode(mode)
+        #if DEBUG
+        NSLog("[Voicefinder] Audio-Modus → %@ (%.0f ms)", mode.rawValue, (CFAbsoluteTimeGetCurrent() - start) * 1000)
+        #endif
+    }
 
     private func applyProfile(_ profile: SessionProfile) async throws {
         if activeProfile == profile {
@@ -89,9 +111,7 @@ actor AudioSessionCoordinator {
 
         switch profile {
         case .conversation:
-            // Ein Modus für Zuhören und Sprechen. `.measurement` schaltet die automatische Verstärkung ab –
-            // mit `.default` regelt die AGC in Sprechpausen das Raumrauschen über die Stille-Schwelle
-            // (Pegel blieb ~1,5 s bei 0,03–0,05), und die Satzende-Erkennung griff nicht.
+            // Startmodus – `applyConversation(mode:)` schaltet danach je Phase um.
             try session.setCategory(
                 .playAndRecord,
                 mode: .measurement,
