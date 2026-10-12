@@ -82,6 +82,9 @@ struct WebAugmentedLanguageEngine: LanguageEngine, Sendable {
             }
 
             NSLog("[Voicefinder] Web-Kontext für LLM geladen (%d Zeichen)", compact.count)
+            #if DEBUG
+            NSLog("[Voicefinder] Web-Kontext (Debug): %@", compact)
+            #endif
             return Self.augmentUserMessage(original: original, webContext: compact)
         } catch {
             NSLog("[Voicefinder] Web-Recherche ohne nutzbaren Treffer – lokales LLM übernimmt.")

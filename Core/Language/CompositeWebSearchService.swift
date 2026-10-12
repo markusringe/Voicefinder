@@ -26,9 +26,19 @@ struct CompositeWebSearchService: WebSearchProviding, Sendable {
     func fetchContext(for query: String) async throws -> String {
         var parts: [String] = []
 
-        if let wiki = try? await wikipedia.fetchSummary(for: query), !wiki.isEmpty {
-            parts.append("Wikipedia: \(wiki)")
-            NSLog("[Voicefinder] Web-Recherche: Wikipedia-Treffer.")
+        do {
+            if let wiki = try await wikipedia.fetchSummary(for: query), !wiki.isEmpty {
+                parts.append("Wikipedia: \(wiki)")
+                NSLog("[Voicefinder] Web-Recherche: Wikipedia-Treffer.")
+            } else {
+                #if DEBUG
+                NSLog("[Voicefinder] Web-Recherche: Wikipedia ohne Artikel für „%@“.", query)
+                #endif
+            }
+        } catch {
+            #if DEBUG
+            NSLog("[Voicefinder] Web-Recherche: Wikipedia-Fehler: %@", String(describing: error))
+            #endif
         }
 
         if let engineContext = await fetchFromConfiguredEngine(query: query), !engineContext.isEmpty {
@@ -57,11 +67,16 @@ struct CompositeWebSearchService: WebSearchProviding, Sendable {
             }
             fallthrough
         case .duckDuckGo:
-            if let context = try? await duckDuckGo.fetchContext(for: query) {
+            do {
+                let context = try await duckDuckGo.fetchContext(for: query)
                 NSLog("[Voicefinder] Web-Recherche: DuckDuckGo.")
                 return context
+            } catch {
+                #if DEBUG
+                NSLog("[Voicefinder] Web-Recherche: DuckDuckGo-Fehler: %@", String(describing: error))
+                #endif
+                return nil
             }
-            return nil
         }
     }
 }

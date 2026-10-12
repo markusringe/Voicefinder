@@ -235,7 +235,7 @@ struct AppDependencies {
         if LLMModelProvider.isSupported {
             return WebAugmentedLanguageEngine(
                 inner: ResilientLanguageEngine(primaryEngine: LocalLLMEngine()),
-                webSearch: DuckDuckGoWebSearchService()
+                webSearch: CompositeWebSearchService()
             )
         }
         return RuleBasedLanguageEngine()

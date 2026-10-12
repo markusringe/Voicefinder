@@ -1,0 +1,7 @@
+# Websuche: mit Stichwort (löst die Recherche aus) und ohne (Kontrolle).
+Hallo
+Such mal im Internet, wie hoch die Zugspitze ist.
+Recherchier bitte, wer war Franz Beckenbauer?
+Such mal im Internet nach der Hauptstadt von Australien.
+Was ist die Hauptstadt von Australien?
+Wie viele Beine hat eine Spinne?
