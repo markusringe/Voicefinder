@@ -65,6 +65,34 @@ private final class LiveRecognitionState: @unchecked Sendable {
         lock.unlock()
     }
 
+    #if DEBUG
+    /// Diagnose (Launch-Argument `-voicefinder.debug.meter YES`): Pegel-Spitze und -Boden je ~0,5 s.
+    nonisolated static let isMeterLoggingEnabled = UserDefaults.standard.bool(forKey: "voicefinder.debug.meter")
+    nonisolated(unsafe) private var meterPeak: Float = 0
+    nonisolated(unsafe) private var meterFloor: Float = 1
+    nonisolated(unsafe) private var meterFrames: AVAudioFrameCount = 0
+
+    nonisolated func recordMeter(level: Float, frames: AVAudioFrameCount, sampleRate: Double) {
+        lock.lock()
+        meterPeak = max(meterPeak, level)
+        meterFloor = min(meterFloor, level)
+        meterFrames += frames
+        let shouldLog = Double(meterFrames) >= sampleRate * 0.5
+        let peak = meterPeak
+        let floor = meterFloor
+        if shouldLog {
+            meterPeak = 0
+            meterFloor = 1
+            meterFrames = 0
+        }
+        lock.unlock()
+
+        if shouldLog {
+            NSLog("[Voicefinder] Mic-Pegel: Spitze %.3f, Boden %.3f", peak, floor)
+        }
+    }
+    #endif
+
     /// Führt Teilergebnisse über Apple-Speech-Resets (nach Sprechpausen) zusammen.
     nonisolated(unsafe) private var accumulator = TranscriptAccumulator()
 
@@ -163,6 +191,22 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
 
     /// Setzt Aufnahme und Erkennung nach TTS fort – ohne neue AsyncStreams (Orchestrator behält Consumer).
     func resumeStreaming() async throws {
+        // Engine läuft noch (Gesprächsprofil): sofort zuhören, erst danach den Modus umschalten –
+        // `setMode` dauert ~300 ms, in denen sonst die ersten Wörter verloren gingen.
+        if let audioEngine, audioEngine.isRunning, isTapInstalled {
+            liveRecognition.setPaused(false)
+            try startRecognitionSession()
+            #if DEBUG
+            NSLog("[Voicefinder] STT bereit (Resume).")
+            #endif
+            do {
+                try await AudioSessionCoordinator.shared.activateRecording()
+            } catch {
+                throw AppleSpeechTranscriberError.audioSessionFailed(error.localizedDescription)
+            }
+            return
+        }
+
         do {
             try await AudioSessionCoordinator.shared.activateRecording()
         } catch {
@@ -212,6 +256,11 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
         if audioEngine.isRunning, isTapInstalled {
             return
         }
+        #if DEBUG
+        if isTapInstalled {
+            NSLog("[Voicefinder] Mic-Engine lief nicht mehr – Neustart.")
+        }
+        #endif
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         #if DEBUG
@@ -241,7 +290,13 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
             }
 
             liveState.request?.append(buffer)
-            levelCont.yield(AudioLevelNormalizer.normalizedRMS(from: buffer))
+            let level = AudioLevelNormalizer.normalizedRMS(from: buffer)
+            #if DEBUG
+            if LiveRecognitionState.isMeterLoggingEnabled {
+                liveState.recordMeter(level: level, frames: buffer.frameLength, sampleRate: buffer.format.sampleRate)
+            }
+            #endif
+            levelCont.yield(level)
         }
 
         isTapInstalled = true

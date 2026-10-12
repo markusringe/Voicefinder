@@ -51,6 +51,10 @@ actor ConversationOrchestrator {
     private var isDeliveringAssistantSpeech = false
     /// True, sobald während WhisperKit-Aufnahme Sprachenergie erkannt wurde.
     private var speechEnergyDetected = false
+    /// Apple Speech: letzter Audio-Puffer mit Sprachpegel – Grundlage der Satzende-Erkennung.
+    private var lastVoiceActivityAt: ContinuousClock.Instant?
+    /// Apple Speech: letzte Änderung des Teil-Transkripts.
+    private var lastPartialChangeAt: ContinuousClock.Instant?
     /// STT ist pausiert während LLM/TTS – verhindert Echo-Rückkopplung.
     private var isSTTSuspended = false
     /// Aktueller KI-Charakter (System-Prompt) für die Language Engine.
@@ -412,6 +416,12 @@ actor ConversationOrchestrator {
             }
         }
 
+        #if !targetEnvironment(simulator)
+        if stopFinalizingSpeechEngine == nil {
+            detectAppleSpeechEndOfUtterance(level: clamped)
+        }
+        #endif
+
         // WhisperKit-Aufnahme: Partials ändern sich nicht – Sprechpause über Pegel erkennen.
         if stopFinalizingSpeechEngine != nil, isListening, !isPipelineActive, !isSTTSuspended, !isMicrophoneMutedByUser {
             if clamped >= Self.speechEnergyThreshold {
@@ -425,8 +435,15 @@ actor ConversationOrchestrator {
 
     /// Stille nach dem letzten Partial, bevor der Satz als fertig gilt (Apple Speech liefert oft keine Finals).
     private static let utteranceSilenceNanoseconds: UInt64 = 850_000_000
-    /// Fallback auf dem Gerät, wenn Apple Speech kein Final liefert.
+    /// Fallback auf dem Gerät, wenn Apple Speech kein Final liefert und der Pegel nie still wird (laute Umgebung).
     private static let appleSpeechFinalFallbackNanoseconds: UInt64 = 2_500_000_000
+    /// Stille nach dem letzten Sprachpegel, ab der eine Äußerung als beendet gilt.
+    /// Apple Speech liefert auf dem Gerät während laufender Aufnahme keine Finals.
+    private static let appleSpeechEndOfUtteranceSilence: Duration = .milliseconds(1000)
+    /// Pegel, ab dem ein Puffer als Sprache zählt (gemessen: Stille ~0,001, Sprache ~0,04–0,15).
+    private static let appleSpeechVoiceLevelThreshold: Float = 0.02
+    /// Erkenner hinkt dem Audio hinterher – sein letztes Wort soll noch ankommen.
+    private static let appleSpeechMinimumPartialAge: Duration = .milliseconds(300)
     /// Mindest-Pegel, ab dem gesprochene Sprache für WhisperKit-Pausenerkennung zählt.
     private static let speechEnergyThreshold: Float = 0.08
     /// Gleicher Satz wird innerhalb dieses Fensters nicht erneut gestartet.
@@ -463,6 +480,7 @@ actor ConversationOrchestrator {
         }
 
         latestPartialUtterance = text
+        lastPartialChangeAt = ContinuousClock.now
         utteranceEndTask?.cancel()
         utteranceEndTask = Task {
             try? await Task.sleep(nanoseconds: Self.appleSpeechFinalFallbackNanoseconds)
@@ -473,6 +491,34 @@ actor ConversationOrchestrator {
             #if DEBUG
             NSLog("[Voicefinder] STT-Fallback (kein Final nach 2,5 s): %@", text)
             #endif
+            await self.submitDetectedUtterance(text)
+        }
+    }
+
+    /// Apple Speech: Äußerung beenden, sobald nach erkanntem Text eine Sekunde Stille am Mikrofon liegt.
+    private func detectAppleSpeechEndOfUtterance(level: Float) {
+        guard isListening, !isPipelineActive, !isSTTSuspended, !isMicrophoneMutedByUser else { return }
+
+        let now = ContinuousClock.now
+        if level >= Self.appleSpeechVoiceLevelThreshold {
+            lastVoiceActivityAt = now
+            return
+        }
+
+        guard !latestPartialUtterance.isEmpty,
+              let lastVoiceActivityAt,
+              now - lastVoiceActivityAt >= Self.appleSpeechEndOfUtteranceSilence,
+              let lastPartialChangeAt,
+              now - lastPartialChangeAt >= Self.appleSpeechMinimumPartialAge else { return }
+
+        let text = latestPartialUtterance
+        self.lastVoiceActivityAt = nil
+        utteranceEndTask?.cancel()
+        utteranceEndTask = nil
+        #if DEBUG
+        NSLog("[Voicefinder] Satzende per Stille erkannt: %@", text)
+        #endif
+        Task {
             await self.submitDetectedUtterance(text)
         }
     }
@@ -1256,6 +1302,8 @@ actor ConversationOrchestrator {
         utteranceEndTask?.cancel()
         latestPartialUtterance = ""
         speechEnergyDetected = false
+        lastVoiceActivityAt = nil
+        lastPartialChangeAt = nil
 
         if let pausable = speechToTextEngine as? PausableSpeechToTextEngine {
             await pausable.pauseStreaming()
@@ -1268,6 +1316,8 @@ actor ConversationOrchestrator {
         isSTTSuspended = false
         latestPartialUtterance = ""
         speechEnergyDetected = false
+        lastVoiceActivityAt = nil
+        lastPartialChangeAt = nil
         utteranceEndTask?.cancel()
 
         guard isListening else { return }
@@ -1297,6 +1347,9 @@ actor ConversationOrchestrator {
         return false
     }
 
+    /// Mindestwortzahl, ab der Wortüberschneidung als Echo-Indiz zählt.
+    private static let minimumWordsForEchoOverlap = 5
+
     /// Grober Textvergleich für Echo-Erkennung (TTS-Rückkopplung).
     private static func textsAreSimilar(_ a: String, _ b: String) -> Bool {
         let normalizedA = a.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -1309,7 +1362,10 @@ actor ConversationOrchestrator {
 
         let wordsA = Set(normalizedA.split(whereSeparator: { $0.isWhitespace }))
         let wordsB = Set(normalizedB.split(whereSeparator: { $0.isWhitespace }))
-        guard wordsA.count >= 3, wordsB.count >= 3 else { return false }
+        // Kurze Antworten greifen naturgemäß Wörter der Frage auf („Wie geht's dir?“ → „Mir geht's gut“).
+        // Echter Nachhall ist ein zusammenhängendes Stück KI-Text und wird oben per `contains` erkannt.
+        guard wordsA.count >= Self.minimumWordsForEchoOverlap,
+              wordsB.count >= Self.minimumWordsForEchoOverlap else { return false }
 
         let overlap = wordsA.intersection(wordsB).count
         let minCount = min(wordsA.count, wordsB.count)
