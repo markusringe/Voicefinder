@@ -1099,10 +1099,15 @@ actor ConversationOrchestrator {
             .suffix(3)
             .filter { $0.role == .assistant }
             .map(\.text)
+        // Für Rückfragen weiter zurückschauen – die letzten drei Antworten.
+        let recentAssistantTextsForFollowUps = turns
+            .filter { $0.role == .assistant }
+            .suffix(3)
+            .map(\.text)
 
         polished = ResponseSanitizer.removingRepeatedFollowUp(
             from: polished,
-            recentAssistantTexts: recentAssistantTexts
+            recentAssistantTexts: recentAssistantTextsForFollowUps
         )
 
         if ResponseSanitizer.isRepeatingLoop(
