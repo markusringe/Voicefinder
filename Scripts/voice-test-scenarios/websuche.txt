@@ -1,7 +1,10 @@
-# Websuche: mit Stichwort (löst die Recherche aus) und ohne (Kontrolle).
+# Websuche für Faktenfragen. Mit -voicefinder.internetEnabled YES starten.
+# Fragen ohne Stichwort (Trigger muss selbst erkennen) plus Smalltalk/Uhrzeit als Kontrolle.
 Hallo
-Such mal im Internet, wie hoch die Zugspitze ist.
-Recherchier bitte, wer war Franz Beckenbauer?
-Such mal im Internet nach der Hauptstadt von Australien.
+Wie hoch ist die Zugspitze?
 Was ist die Hauptstadt von Australien?
 Wie viele Beine hat eine Spinne?
+Wer war Franz Beckenbauer?
+Wann wurde die Berliner Mauer gebaut?
+Welcher Wochentag ist heute?
+Wie geht es dir?

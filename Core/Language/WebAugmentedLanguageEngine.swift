@@ -34,10 +34,17 @@ struct WebAugmentedLanguageEngine: LanguageEngine, Sendable {
                 return try await inner.reply(to: userMessage, context: context, options: options)
             }
 
+            var replyContext = context
             if let augmented = await fetchAugmentedMessageIfUseful(original: text) {
                 userMessage = augmented
+                // Letzter Nutzer-Turn trägt sonst die Originalfrage, und `userMessage` käme als zweite
+                // Nutzernachricht hinten dran – die Frage stünde doppelt im Prompt.
+                if let last = replyContext.last, last.role == .user, last.text == text {
+                    replyContext[replyContext.count - 1] = ChatTurn(role: .user, text: augmented)
+                }
             }
             // Leere oder nutzlose Web-Treffer: still ignorieren – lokales LLM antwortet allein.
+            return try await inner.reply(to: userMessage, context: replyContext, options: options)
         }
 
         return try await inner.reply(to: userMessage, context: context, options: options)
@@ -72,8 +79,8 @@ struct WebAugmentedLanguageEngine: LanguageEngine, Sendable {
     /// Lädt Web-Kontext; nil wenn leer, fehlgeschlagen oder irrelevant.
     nonisolated private func fetchAugmentedMessageIfUseful(original: String) async -> String? {
         do {
-            let webContext = try await webSearch.fetchContext(for: original)
-            let compact = String(webContext.prefix(120))
+            let webContext = try await fetchContextWithTimeout(for: original)
+            let compact = String(webContext.prefix(Self.contextCharacterBudget))
                 .trimmingCharacters(in: .whitespacesAndNewlines)
 
             guard WebSearchHeuristic.isUsefulWebContext(compact) else {
@@ -92,18 +99,35 @@ struct WebAugmentedLanguageEngine: LanguageEngine, Sendable {
         }
     }
 
-    /// Formuliert die Nutzerfrage mit Recherche-Ergebnissen für das kleine LLM.
+    /// Zeichenbudget für den Web-Kontext im Prompt.
+    nonisolated private static let contextCharacterBudget = 500
+
+    /// Harte Obergrenze für die Recherche – im Sprachdialog zählt jede Sekunde Wartezeit.
+    nonisolated private static let searchTimeout: Duration = .milliseconds(2500)
+
+    nonisolated private func fetchContextWithTimeout(for query: String) async throws -> String {
+        let webSearch = webSearch
+        let timeout = Self.searchTimeout
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask { try await webSearch.fetchContext(for: query) }
+            group.addTask {
+                try await Task.sleep(for: timeout)
+                throw WebSearchError.timedOut
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else { throw WebSearchError.emptyResults }
+            return first
+        }
+    }
+
+    /// Frage mit Nachschlage-Text für das kleine LLM – als normaler Satz, nicht in Klammerblöcken,
+    /// die das Modell zitieren würde.
     nonisolated private static func augmentUserMessage(original: String, webContext: String) -> String {
         """
-        [Internet-Recherche – nutze diese Fakten nur wenn sie zur Frage passen]
-        \(webContext)
-
-        [Nutzerfrage]
         \(original)
 
-        [Aufgabe]
-        Beantworte die Nutzerfrage auf Deutsch in vollständigen Sätzen für Sprachausgabe. \
-        Nutze die Recherche nur bei passenden Fakten. Sonst antworte aus dem Gespräch und deinem Wissen.
+        (Zum Nachschlagen: \(webContext) – Antworte knapp und konkret damit, wenn es die Frage beantwortet, \
+        und nenne Zahlen, Jahre und Namen genau so, wie sie dort stehen.)
         """
     }
 }
