@@ -535,7 +535,15 @@ enum ResponseSanitizer: Sendable {
         return "Stimmt, entschuldige – ich frage nicht noch mal dasselbe. Erzähl einfach weiter."
     }
 
-    /// Entfernt eine Folgefrage, wenn sie der letzten KI-Frage zu ähnlich ist.
+    /// Mindestwortzahl, ab der ein Aussagesatz als Wiederholung gilt – kurze Floskeln („Gern geschehen.“)
+    /// kommen legitim mehrfach vor.
+    nonisolated private static let minimumWordsForRepeatedStatement = 4
+
+    /// Entfernt Schlusssätze, die schon in einer der letzten Antworten standen – Rückfragen wie
+    /// „Was bringst du heute mit?“ genauso wie angehängte Aussagesätze („Aber hey, du sprichst …“).
+    ///
+    /// Das Modell kopiert sonst Sätze aus dem eigenen Verlauf und hängt sie an jede Antwort. Es bleibt
+    /// immer mindestens ein Satz übrig.
     nonisolated static func removingRepeatedFollowUp(
         from candidate: String,
         recentAssistantTexts: [String]
@@ -543,20 +551,37 @@ enum ResponseSanitizer: Sendable {
         var sentences = deduplicateSentences(sentencesForSpeech(candidate))
         guard sentences.count >= 2 else { return candidate }
 
-        let lastSentence = sentences[sentences.count - 1]
-        guard lastSentence.contains("?") else { return candidate }
+        // Alle Sätze der letzten Antworten prüfen – nicht nur die letzten: Wurde eine Wiederholung schon
+        // entfernt, endet die gespeicherte Antwort ohne sie, und sie käme sonst eine Runde später zurück.
+        let previousSentences = recentAssistantTexts.flatMap { sentencesForSpeech($0) }
+        guard !previousSentences.isEmpty else { return candidate }
 
-        // Alle Fragen der letzten Antworten prüfen – nicht nur die letzte: Wurde eine Wiederholung schon
-        // entfernt, endet die gespeicherte Antwort ohne Frage, und die Frage käme sonst eine Runde später zurück.
-        let previousQuestions = recentAssistantTexts
-            .flatMap { sentencesForSpeech($0) }
-            .filter { $0.contains("?") }
-        if previousQuestions.contains(where: { followUpQuestionsAreSimilar(lastSentence, $0) }) {
+        var removedAny = false
+        while sentences.count >= 2,
+              let last = sentences.last,
+              isRepeatedClosingSentence(last, previousSentences: previousSentences) {
             sentences.removeLast()
-            let joined = sentences.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-            return ensureTerminalPunctuation(joined)
+            removedAny = true
         }
-        return candidate
+        guard removedAny else { return candidate }
+
+        let joined = sentences.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        return ensureTerminalPunctuation(joined)
+    }
+
+    nonisolated private static func isRepeatedClosingSentence(
+        _ sentence: String,
+        previousSentences: [String]
+    ) -> Bool {
+        if sentence.contains("?") {
+            return previousSentences
+                .filter { $0.contains("?") }
+                .contains { followUpQuestionsAreSimilar(sentence, $0) }
+        }
+
+        let wordCount = normalizeForComparison(sentence).split(whereSeparator: \.isWhitespace).count
+        guard wordCount >= minimumWordsForRepeatedStatement else { return false }
+        return previousSentences.contains { sentencesAreDuplicates(sentence, $0) }
     }
 
     /// Deutsche Funktionswörter – für Ähnlichkeitsvergleiche ignorieren.
