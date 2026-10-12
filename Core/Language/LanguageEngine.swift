@@ -44,34 +44,14 @@ enum AIInteractionStyle: String, CaseIterable, Identifiable, Sendable, Codable {
         }
     }
 
-    /// System-Prompt-Zusatz für das LLM.
+    /// Ton-Vorgabe für den System-Prompt – eine Zeile, damit kleine Modelle ihr folgen statt sie zu zitieren.
     nonisolated var styleDirective: String {
         switch self {
-        case .normal:
-            """
-            STIL (Normal): Antworte freundlich, höflich und sachlich. \
-            Sei hilfsbereit und verständlich. Kein Drama, kein Sarkasmus.
-            """
-        case .forsch:
-            """
-            STIL (Forsch): Antworte direkt, selbstbewusst und ohne Umschweife. \
-            Keine Floskeln wie „Gerne helfe ich“. Komm sofort zum Punkt.
-            """
-        case .frech:
-            """
-            STIL (Frech): Antworte frech mit Augenzwinkern – witzig-provokant, \
-            aber nie beleidigend. Hilf trotzdem zuverlässig.
-            """
-        case .lustig:
-            """
-            STIL (Lustig): Antworte humorvoll und unterhaltsam. \
-            Baue wenn passend einen kleinen Witz ein – bleib verständlich.
-            """
-        case .schlau:
-            """
-            STIL (Schlau): Antworte präzise und intelligent. \
-            Ordne kurz ein, warum etwas so ist – ohne Belehrungston.
-            """
+        case .normal: "Dein Ton: freundlich, klar und ausgewogen."
+        case .forsch: "Dein Ton: direkt und selbstbewusst, ohne Umschweife."
+        case .frech: "Dein Ton: frech mit Augenzwinkern, aber nie beleidigend – du hilfst trotzdem zuverlässig."
+        case .lustig: "Dein Ton: humorvoll und locker, gern mit einem kleinen Witz."
+        case .schlau: "Dein Ton: klug und präzise, gern mit einer kurzen Einordnung."
         }
     }
 
@@ -117,44 +97,41 @@ struct LanguageReplyOptions: Sendable, Equatable {
 enum CharacterProfileStore {
     nonisolated static let userDefaultsKey = "voicefinder.characterPrompt"
 
-    /// Standard-Charakter für Qwen – natürlich, hilfreich, für Sprache optimiert.
+    /// Standard-Charakter – kurz und in natürlicher Sprache; Regeln stehen in `answerRules`.
     nonisolated static let defaultPrompt = """
-    Du bist ein freundlicher, menschlich klingender Gesprächspartner in einer Voice-App.
-    Sprich natürlich, wie in einem echten Gespräch – warm, konkret und auf den Nutzer bezogen.
+    Du bist ein freundlicher, aufmerksamer Gesprächspartner. \
+    Ihr unterhaltet euch mündlich auf Deutsch und duzt euch.
+    """
 
-    Regeln:
-    - Antworte auf Deutsch in idiomatischer Umgangssprache.
-    - Pro Antwort: ein bis drei vollständige Sätze (etwa 20–50 Wörter).
-    - Beantworte die Frage oder das Anliegen direkt – nicht ausweichen, wenn der Kontext klar ist.
-    - Stelle höchstens EINE Folgefrage; keine redundanten Rückfragen zu bereits Gesagtem.
-    - Beende jeden Satz mit . oder ? – keine halben Sätze oder abgebrochenen Fragmente.
-    - Kein Markdown, keine Listen, keine Meta-Kommentare – nur gesprochener Dialog.
-    - Vermeide leere Floskeln wie „Alles klar“, „Verstanden“ oder „Okay“ allein.
-    - Bei echter Unsicherheit: kurz und präzise nachfragen statt generisch zu antworten.
+    /// Frühere Standard-Charaktere – gespeichert gelten sie weiter als Standard, nicht als eigener Charakter.
+    nonisolated static let legacyDefaultPrompts = [
+        """
+        Du bist ein freundlicher, menschlich klingender Gesprächspartner in einer Voice-App.
+        Sprich natürlich, wie in einem echten Gespräch – warm, konkret und auf den Nutzer bezogen.
+
+        Regeln:
+        - Antworte auf Deutsch in idiomatischer Umgangssprache.
+        - Pro Antwort: ein bis drei vollständige Sätze (etwa 20–50 Wörter).
+        - Beantworte die Frage oder das Anliegen direkt – nicht ausweichen, wenn der Kontext klar ist.
+        - Stelle höchstens EINE Folgefrage; keine redundanten Rückfragen zu bereits Gesagtem.
+        - Beende jeden Satz mit . oder ? – keine halben Sätze oder abgebrochenen Fragmente.
+        - Kein Markdown, keine Listen, keine Meta-Kommentare – nur gesprochener Dialog.
+        - Vermeide leere Floskeln wie „Alles klar“, „Verstanden“ oder „Okay“ allein.
+        - Bei echter Unsicherheit: kurz und präzise nachfragen statt generisch zu antworten.
+        """,
+    ]
+
+    /// Antwortregeln – einmal, knapp, ohne Befehlston.
+    nonisolated static let answerRules = """
+    So antwortest du:
+    - Ein bis zwei kurze, vollständige Sätze, so wie man spricht. Keine Listen, kein Markdown, keine Emojis.
+    - Beantworte zuerst, was gefragt wurde. Stell höchstens eine Rückfrage, und nur wenn sie wirklich passt.
+    - Wiederhole weder die Frage noch Sätze aus deinen letzten Antworten.
+    - Wenn du etwas nicht sicher weißt, sag das ehrlich, statt zu raten.
     """
 
     nonisolated static let openingBrevityDirective = """
-    ERÖFFNUNG (verbindlich): Genau ZWEI kurze Sätze – Begrüßung plus EINE offene Frage. \
-    Maximal 20 Wörter insgesamt. Keine Erklärungen, kein Rollen-Meta-Text.
-    """
-
-    nonisolated static let germanOutputDirective = """
-    AUSGABE (verbindlich): Nur gesprochene Dialogsätze auf Deutsch. \
-    Beende jede Antwort mit einem Satzzeichen (. oder ?). \
-    Keine Meta-Kommentare, Regieanweisungen oder Wiederholung von System-Anweisungen.
-    """
-
-    nonisolated static let voiceLatencyDirective = """
-    QUALITÄT: Antworte vollständig und verständlich – lieber zwei klare Sätze als ein bruchstückhafter Satz.
-    """
-
-    /// Verhalten im laufenden Dialog – direkte Antworten, keine unnötigen Rückfragen.
-    nonisolated static let dialogBehaviorDirective = """
-    DIALOG (verbindlich):
-    - Gehe zuerst auf den Inhalt der Nutzerfrage ein, dann optional eine kurze Folgefrage.
-    - Wiederhole keine Formulierung, Begrüßung oder Frage aus deiner letzten Antwort.
-    - Wenn der Nutzer etwas schon erklärt hat: darauf Bezug nehmen, nicht erneut dasselbe erfragen.
-    - Kurze informelle Antworten sind erlaubt, wenn sie inhaltlich vollständig sind.
+    Beginne jetzt das Gespräch: eine kurze Begrüßung und eine offene Frage, zusammen höchstens 20 Wörter.
     """
 
     nonisolated static func load() -> String {
@@ -175,50 +152,54 @@ enum CharacterProfileStore {
 
     nonisolated static func usesDefaultPrompt(_ prompt: String) -> Bool {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty || trimmed == defaultPrompt
+        return trimmed.isEmpty || trimmed == defaultPrompt || legacyDefaultPrompts.contains(trimmed)
     }
 
     nonisolated static func effectiveCharacterPrompt(_ customCharacter: String) -> String {
-        let trimmed = customCharacter.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty || trimmed == defaultPrompt { return defaultPrompt }
-        return trimmed
+        if usesDefaultPrompt(customCharacter) { return defaultPrompt }
+        return customCharacter.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Baut den System-Prompt: Identität → Auftrag → Charakter → Stil → Profil → Regeln.
+    /// Baut den System-Prompt: Charakter → Ton → Regeln → Name/Rolle → Profil → Datum.
+    ///
+    /// Bewusst kurz (~200–300 Tokens statt ~1.100): kleine Modelle folgen wenigen klaren Sätzen besser,
+    /// als sie lange „verbindlich“-Blöcke befolgen – sie kopierten diese teils in ihre Antworten.
+    /// Stabile Teile stehen vorn, Datum und Uhrzeit am Ende (Prompt-Cache bleibt bis dahin gültig).
     nonisolated static func resolvedSystemPrompt(
         customCharacter: String,
         style: AIInteractionStyle,
         userBrain: UserBrainPromptContext,
         at date: Date = Date()
     ) -> String {
-        var parts: [String] = []
+        var parts: [String] = [
+            effectiveCharacterPrompt(customCharacter),
+            style.styleDirective,
+            answerRules,
+        ]
 
-        if let block = userBrain.assistantNameDirective { parts.append(block) }
-        if let block = userBrain.missionDirective { parts.append(block) }
-        parts.append(effectiveCharacterPrompt(customCharacter))
-        parts.append(style.styleDirective)
-        if let block = userBrain.profilePromptBlock { parts.append(block) }
-        if let block = userBrain.discoveryDirective { parts.append(block) }
-        if let block = userBrain.userFirstNameDirective { parts.append(block) }
-        if let block = userBrain.missionConversationDirective { parts.append(block) }
-        parts.append(DeviceContextProvider.contextBlock(for: date, city: userBrain.resolvedCity))
-        parts.append(germanOutputDirective)
-        parts.append(dialogBehaviorDirective)
-        parts.append(voiceLatencyDirective)
+        let personal = [
+            userBrain.assistantNameDirective,
+            userBrain.missionDirective,
+            userBrain.missionConversationDirective,
+            userBrain.profilePromptBlock,
+            userBrain.discoveryDirective,
+        ].compactMap { $0 }
+        if !personal.isEmpty {
+            parts.append(personal.joined(separator: "\n"))
+        }
 
+        parts.append(DeviceContextProvider.contextBlock(for: date))
         return parts.joined(separator: "\n\n")
     }
 
-    /// Nutzer-Nachricht für das LLM – deutsch gerahmt, optional mit Vornamen.
+    /// Nutzer-Nachricht für das LLM – unverändert. Eine Rahmung wie „Der Gesprächspartner X sagt:“
+    /// hat das Modell wörtlich in seine Antworten übernommen; der Name steht im System-Prompt.
     nonisolated static func germanFramedUserMessage(
         _ text: String,
         userFirstName: String? = nil
     ) -> String {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let name = userFirstName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-            return "Der Gesprächspartner \(name) sagt: \(trimmed)"
-        }
-        return trimmed
+        _ = userFirstName
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Interner Prompt für Auftrags-Eröffnung.
