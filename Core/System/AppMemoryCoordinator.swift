@@ -65,6 +65,16 @@ enum AppMemoryCoordinator: Sendable {
         #endif
     }
 
+    /// True, wenn der MLX-Prompt-Cache (~110 KB pro Token) zwischen Runden im RAM bleiben darf.
+    nonisolated static var allowsPromptCacheRetention: Bool {
+        guard !shouldReduceMemoryUse else { return false }
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return ProcessInfo.processInfo.physicalMemory >= concurrentModelsMinimumPhysicalMemory
+        #endif
+    }
+
     /// Piper bleibt zwischen Runden geladen, wenn frühes Sprechen aktiv ist und der Speicher reicht.
     nonisolated static var keepsPiperResident: Bool {
         AppSettingsStore.earlySpeechEnabled && allowsConcurrentLLMAndTTS

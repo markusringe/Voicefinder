@@ -193,6 +193,8 @@ struct AppDependencies {
             await MLXChatService.shared.cancelActiveGenerationAndWait()
         }
 
+        await MLXChatService.shared.dropPromptCache()
+
         if SpeechDeliveryCoordinator.isActive {
             NSLog("[Voicefinder] Speicherwarnung während TTS – Piper bleibt geladen bis Ende der Wiedergabe.")
         } else {

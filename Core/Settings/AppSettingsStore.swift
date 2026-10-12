@@ -77,6 +77,16 @@ enum AppSettingsStore {
         }
     }
 
+    /// Nur Debug: schaltet den MLX-Prompt-Cache für A/B-Vergleiche ab.
+    /// Setzen per Launch-Argument `-voicefinder.debug.disablePromptCache YES`.
+    nonisolated static var isPromptCacheDisabledForDebugging: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "voicefinder.debug.disablePromptCache")
+        #else
+        false
+        #endif
+    }
+
     /// True, wenn der erste Satz schon während der LLM-Generierung gesprochen werden darf (Standard: an).
     /// Greift nur auf Geräten mit genug RAM – siehe `AppMemoryCoordinator.allowsConcurrentLLMAndTTS`.
     nonisolated static var earlySpeechEnabled: Bool {
