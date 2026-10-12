@@ -27,6 +27,8 @@ actor ConversationOrchestrator {
     /// Gibt Piper vor MLX frei.
     private let trimMemoryBeforeLLM: (@Sendable () async -> Void)?
     private var piperPreloadTask: Task<Void, Never>?
+    /// Frühes Vorlesen des ersten Satzes, während MLX noch generiert.
+    private var earlySpeechTask: Task<Void, Error>?
     /// Verzögerte KI-Gehirn-Anreicherung – blockiert nicht die nächste Antwort.
     private var brainEnrichmentTask: Task<Void, Never>?
 
@@ -43,6 +45,10 @@ actor ConversationOrchestrator {
     /// Verhindert doppelte Pipeline-Starts für denselben Satz.
     private var lastSubmittedUtterance: String = ""
     private var lastSubmittedAt: Date = .distantPast
+    /// Laufende Nutzeräußerung – blockiert parallele Pipeline für denselben Inhalt.
+    private var inFlightUtteranceKey: String?
+    /// Verhindert parallele TTS-Ausgabe (Echo/Doppel-Pipeline).
+    private var isDeliveringAssistantSpeech = false
     /// True, sobald während WhisperKit-Aufnahme Sprachenergie erkannt wurde.
     private var speechEnergyDetected = false
     /// STT ist pausiert während LLM/TTS – verhindert Echo-Rückkopplung.
@@ -169,6 +175,8 @@ actor ConversationOrchestrator {
         latestPartialUtterance = ""
         lastSubmittedUtterance = ""
         lastSubmittedAt = .distantPast
+        inFlightUtteranceKey = nil
+        isDeliveringAssistantSpeech = false
         preparedConversationOpeningText = nil
         conversationOpeningDelivered = false
         uiNotifyScheduled = false
@@ -417,6 +425,8 @@ actor ConversationOrchestrator {
 
     /// Stille nach dem letzten Partial, bevor der Satz als fertig gilt (Apple Speech liefert oft keine Finals).
     private static let utteranceSilenceNanoseconds: UInt64 = 850_000_000
+    /// Fallback auf dem Gerät, wenn Apple Speech kein Final liefert.
+    private static let appleSpeechFinalFallbackNanoseconds: UInt64 = 2_500_000_000
     /// Mindest-Pegel, ab dem gesprochene Sprache für WhisperKit-Pausenerkennung zählt.
     private static let speechEnergyThreshold: Float = 0.08
     /// Gleicher Satz wird innerhalb dieses Fensters nicht erneut gestartet.
@@ -434,10 +444,33 @@ actor ConversationOrchestrator {
             partialText = trimmed
             setState(.transcribing(partialText: trimmed))
             if stopFinalizingSpeechEngine == nil {
+                #if targetEnvironment(simulator)
                 scheduleUtteranceEndDetection(for: trimmed)
+                #else
+                // Gerät: primär auf Apple-Speech-Finals warten – Partial-Timer nur als Fallback.
+                scheduleAppleSpeechFinalFallback(for: trimmed)
+                #endif
             }
         default:
             break
+        }
+    }
+
+    /// Fallback, wenn Apple Speech auf dem Gerät kein finales Segment sendet.
+    private func scheduleAppleSpeechFinalFallback(for text: String) {
+        if text == latestPartialUtterance, utteranceEndTask != nil {
+            return
+        }
+
+        latestPartialUtterance = text
+        utteranceEndTask?.cancel()
+        utteranceEndTask = Task {
+            try? await Task.sleep(nanoseconds: Self.appleSpeechFinalFallbackNanoseconds)
+            guard !Task.isCancelled else { return }
+            guard self.isListening, !self.isSTTSuspended, !self.isMicrophoneMutedByUser else { return }
+            guard !self.isPipelineActive else { return }
+            guard self.latestPartialUtterance == text else { return }
+            await self.submitDetectedUtterance(text)
         }
     }
 
@@ -540,6 +573,10 @@ actor ConversationOrchestrator {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count >= 2 else { return }
         guard isListening else { return }
+
+        let utteranceKey = ResponseSanitizer.normalizeForComparison(trimmed)
+        guard !utteranceKey.isEmpty else { return }
+
         if isPipelineActive {
             await interruptActivePipeline(keepListening: true)
         }
@@ -550,24 +587,36 @@ actor ConversationOrchestrator {
         }
 
         let now = Date()
-        if trimmed == lastSubmittedUtterance,
+        if utteranceKey == inFlightUtteranceKey {
+            NSLog("[Voicefinder] Pipeline läuft bereits für diese Äußerung – ignoriert.")
+            return
+        }
+        if utteranceKey == ResponseSanitizer.normalizeForComparison(lastSubmittedUtterance),
            now.timeIntervalSince(lastSubmittedAt) < Self.utteranceDedupInterval {
             return
         }
 
         lastSubmittedUtterance = trimmed
         lastSubmittedAt = now
+        inFlightUtteranceKey = utteranceKey
 
         NSLog("[Voicefinder] Pipeline-Start: %@", trimmed)
         utteranceEndTask?.cancel()
         pipelineTask?.cancel()
         pipelineTask = Task {
             await self.processUserText(trimmed)
+            if self.inFlightUtteranceKey == utteranceKey {
+                self.inFlightUtteranceKey = nil
+            }
         }
     }
 
     private func applyFinalTranscript(_ finalText: String) async {
         guard !isSTTSuspended, !isMicrophoneMutedByUser else { return }
+
+        // Partial-Fallback-Timer abbrechen – Final hat Vorrang.
+        utteranceEndTask?.cancel()
+        utteranceEndTask = nil
 
         partialText = finalText
         notifyObservers()
@@ -615,8 +664,15 @@ actor ConversationOrchestrator {
             return
         }
 
-        // Piper nur unter Speicherdruck entladen – sonst bleibt TTS zwischen Runden schneller.
-        await releasePiperBeforeLLMIfNeeded()
+        var earlySpeechAllowed = shouldSpeakEarly(forUserText: trimmed)
+        if earlySpeechAllowed {
+            // Piper parallel zum MLX-Prefill laden – bis zum ersten Satz ist es meist bereit.
+            startPiperPreloadIfNeeded()
+        } else {
+            // Piper nur unter Speicherdruck entladen – sonst bleibt TTS zwischen Runden schneller.
+            await releasePiperBeforeLLMIfNeeded()
+        }
+        var earlySpokenSentence: String?
 
         do {
             let responseStream = try await languageEngine.reply(
@@ -647,6 +703,19 @@ actor ConversationOrchestrator {
                     break
                 }
 
+                // Ersten fertigen Satz sofort vorlesen – der Rest folgt nach dem Stream.
+                if earlySpeechAllowed, earlySpokenSentence == nil,
+                   let (sentence, _) = StreamingSpeechSegmenter.firstCompletedSentence(
+                       in: ResponseSanitizer.sanitizeForSpeech(responseText)
+                   ) {
+                    if isSafeForEarlySpeech(sentence) {
+                        earlySpokenSentence = sentence
+                        startEarlySpeech(sentence)
+                    } else {
+                        earlySpeechAllowed = false
+                    }
+                }
+
                 // UI nicht bei jedem Token neu zeichnen – reduziert MainActor-Last und Re-Renders.
                 let now = ContinuousClock.now
                 if now - lastStreamUIUpdate >= .milliseconds(250) {
@@ -670,7 +739,8 @@ actor ConversationOrchestrator {
             )
             finalResponse = polishAssistantResponse(finalResponse, userText: trimmed)
 
-            guard !finalResponse.isEmpty else {
+            // Nach frühem Sprechen trotzdem ausliefern – der erste Satz läuft bereits.
+            guard !finalResponse.isEmpty || earlySpokenSentence != nil else {
                 if !Task.isCancelled {
                     NSLog("[Voicefinder] Leere LLM-Antwort – kein Text für TTS.")
                     setState(.failed(message: "Keine Antwort vom Sprachmodell erhalten. Bitte erneut sprechen."))
@@ -679,7 +749,11 @@ actor ConversationOrchestrator {
                 return
             }
 
-            await deliverAssistantResponse(finalResponse, userText: trimmed)
+            await deliverAssistantResponse(
+                finalResponse,
+                userText: trimmed,
+                earlySpokenSentence: earlySpokenSentence
+            )
         } catch {
             if Task.isCancelled {
                 await resumeSTTAfterAssistantOutput()
@@ -708,10 +782,34 @@ actor ConversationOrchestrator {
     }
 
     /// Speichert Assistenten-Antwort, spricht sie vor und setzt den Zustand zurück.
-    private func deliverAssistantResponse(_ finalResponse: String, userText: String) async {
-        let spokenText = ResponseSanitizer.deduplicatedForSpeech(finalResponse)
+    /// - Parameter earlySpokenSentence: Satz, der bereits während der Generierung vorgelesen wird.
+    private func deliverAssistantResponse(
+        _ finalResponse: String,
+        userText: String,
+        earlySpokenSentence: String? = nil
+    ) async {
+        guard !isDeliveringAssistantSpeech else {
+            NSLog("[Voicefinder] TTS bereits aktiv – doppelte Sprachausgabe verhindert.")
+            return
+        }
+        isDeliveringAssistantSpeech = true
+        defer { isDeliveringAssistantSpeech = false }
+
+        var spokenText = ResponseSanitizer.deduplicatedForSpeech(finalResponse)
         if spokenText != finalResponse {
             NSLog("[Voicefinder] Doppelte Formulierung in Antwort entfernt.")
+        }
+
+        // Nach frühem Sprechen nur noch den Rest vorlesen; der Verlauf zeigt, was tatsächlich gesagt wurde.
+        var textToSpeak = spokenText
+        if let earlySpokenSentence {
+            if let remainder = StreamingSpeechSegmenter.remainder(of: spokenText, afterSpoken: earlySpokenSentence) {
+                textToSpeak = remainder
+            } else {
+                NSLog("[Voicefinder] Finale Antwort weicht vom früh gesprochenen Satz ab – vollständige Antwort folgt.")
+                spokenText = (earlySpokenSentence + " " + spokenText)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
         }
 
         turns.append(ChatTurn(role: .assistant, text: spokenText))
@@ -719,10 +817,24 @@ actor ConversationOrchestrator {
         notifyObservers()
         setState(.speaking(responseText: spokenText))
 
-        await awaitPiperPreloadIfNeeded()
-        NSLog("[Voicefinder] TTS startet (%d Zeichen) …", spokenText.count)
+        NSLog("[Voicefinder] TTS startet (%d Zeichen) …", textToSpeak.count)
         do {
-            try await speakResponseText(spokenText)
+            if let earlySpeechTask {
+                // Rest vorab synthetisieren, während der erste Satz noch läuft – keine Pause dazwischen.
+                if let prefetching = textToSpeechEngine as? any PrefetchingTextToSpeechEngine {
+                    let preparedRest = ResponseSanitizer.deduplicatedForSpeech(textToSpeak)
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !preparedRest.isEmpty, preparedRest.count <= Self.singleSpeakCharacterLimit {
+                        await prefetching.prefetch(text: preparedRest)
+                    }
+                }
+                try await earlySpeechTask.value
+                self.earlySpeechTask = nil
+            } else {
+                await awaitPiperPreloadIfNeeded()
+            }
+            try Task.checkCancellation()
+            try await speakResponseText(textToSpeak)
             await releasePiperAfterSpeechIfNeeded()
             AppMemoryCoordinator.markResourcesReleased()
             AppMemoryCoordinator.markDialogRoundCompleted()
@@ -745,6 +857,52 @@ actor ConversationOrchestrator {
         setState(isListening ? .listening : .idle)
         await resumeSTTAfterAssistantOutput()
         scheduleBrainEnrichment(from: userText)
+    }
+
+    // MARK: - Frühes Sprechen
+
+    /// True, wenn der erste Satz dieser Runde schon während der Generierung gesprochen werden darf.
+    private func shouldSpeakEarly(forUserText userText: String) -> Bool {
+        guard AppSettingsStore.earlySpeechEnabled else { return false }
+        guard AppMemoryCoordinator.allowsConcurrentLLMAndTTS else {
+            NSLog("[Voicefinder] Frühes Sprechen aus – zu wenig Speicher für MLX + Piper.")
+            return false
+        }
+        // Beschwerde über Wiederholungen ersetzt die Antwort komplett – nichts vorab sprechen.
+        return !ResponseSanitizer.isUserFrustratedAboutRepetition(userText)
+    }
+
+    /// Prüft den ersten Satz vorab – nach dem Sprechen kann ihn `polishAssistantResponse` nicht mehr ersetzen.
+    private func isSafeForEarlySpeech(_ sentence: String) -> Bool {
+        guard ResponseSanitizer.isPredominantlyGerman(sentence) else { return false }
+        guard !ResponseSanitizer.isWeakAcknowledgment(sentence) else { return false }
+
+        let recentAssistantSentences = turns
+            .suffix(3)
+            .filter { $0.role == .assistant }
+            .flatMap { ResponseSanitizer.sentencesForSpeech($0.text) }
+        return !recentAssistantSentences.contains {
+            ResponseSanitizer.sentencesAreDuplicates(sentence, $0)
+        }
+    }
+
+    /// Spricht den ersten Satz, während der LLM-Stream weiterläuft.
+    private func startEarlySpeech(_ sentence: String) {
+        NSLog("[Voicefinder] Frühes Sprechen: erster Satz (%d Zeichen).", sentence.count)
+        earlySpeechTask?.cancel()
+        earlySpeechTask = Task {
+            await self.awaitPiperPreloadIfNeeded()
+            try Task.checkCancellation()
+            try await self.speakResponseText(sentence)
+        }
+    }
+
+    /// Startet Piper-Preload im Hintergrund, ohne darauf zu warten.
+    private func startPiperPreloadIfNeeded() {
+        guard piperPreloadTask == nil else { return }
+        piperPreloadTask = Task {
+            await self.preparePiperForSpeechIfAllowed()
+        }
     }
 
     /// Erzeugt den Eröffnungstext – Auftrag, KI-Gehirn oder Standort-Kontext.
@@ -920,13 +1078,25 @@ actor ConversationOrchestrator {
         return polished
     }
 
-    /// Spricht den vollständigen Text Satz für Satz vor – ohne Kürzung mitten im Satz.
+    /// Maximale Zeichen für eine einzelne Piper-Synthese – darüber Satz für Satz.
+    private static let singleSpeakCharacterLimit = 320
+
+    /// Spricht Antworttext vor – typische Antworten in einem Stück (kein Doppel-Audio durch Satz-Splitting).
     private func speakResponseText(_ text: String) async throws {
         SpeechDeliveryCoordinator.begin()
         defer { SpeechDeliveryCoordinator.end() }
 
+        let trimmed = ResponseSanitizer.deduplicatedForSpeech(text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if trimmed.count <= Self.singleSpeakCharacterLimit {
+            try await textToSpeechEngine.speak(text: trimmed)
+            return
+        }
+
         let sentences = ResponseSanitizer.deduplicateSentences(
-            ResponseSanitizer.sentencesForSpeech(text)
+            ResponseSanitizer.sentencesForSpeech(trimmed)
         )
         guard !sentences.isEmpty else { return }
 
@@ -1016,7 +1186,7 @@ actor ConversationOrchestrator {
 
         brainEnrichmentTask?.cancel()
         brainEnrichmentTask = Task {
-            try? await Task.sleep(for: .seconds(8))
+            try? await Task.sleep(for: .seconds(12))
             guard !Task.isCancelled else { return }
             await enrichAndApplyBrain(from: message)
         }
@@ -1028,6 +1198,8 @@ actor ConversationOrchestrator {
         brainEnrichmentTask = nil
         piperPreloadTask?.cancel()
         piperPreloadTask = nil
+        earlySpeechTask?.cancel()
+        earlySpeechTask = nil
     }
 
     /// Beendet alle STT-Stream-Consumer – verhindert mehrfach lauschende Tasks nach Neustart.

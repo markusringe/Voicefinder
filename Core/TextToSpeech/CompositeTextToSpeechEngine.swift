@@ -8,7 +8,7 @@
 import Foundation
 
 /// Piper-TTS – einzige Sprachausgabe (kein Apple-System-Fallback).
-struct CompositeTextToSpeechEngine: TextToSpeechEngine {
+struct CompositeTextToSpeechEngine: PrefetchingTextToSpeechEngine {
     private let piper: PiperTextToSpeechEngine
 
     init(piper: PiperTextToSpeechEngine) {
@@ -62,6 +62,11 @@ struct CompositeTextToSpeechEngine: TextToSpeechEngine {
             combined += chunk
         }
         try await speak(text: combined)
+    }
+
+    func prefetch(text: String) async {
+        guard PiperModelProvider.isFullyBundled else { return }
+        await piper.prefetch(text: text)
     }
 
     func stop() async {

@@ -8,10 +8,11 @@
 @preconcurrency import AVFoundation
 import Foundation
 
-/// Spielt mono-Float-PCM (Sherpa-ONNX-Ausgabe) ab – unterstützt schnelles Stoppen.
+/// Spielt mono-Float-PCM (Sherpa-ONNX-Ausgabe) ab – Engine wird wiederverwendet (Speicher).
 actor PiperPCMPlayer {
     private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
+    private var activeFormat: AVAudioFormat?
     private var playbackGeneration: UInt64 = 0
     private var activeBufferContinuation: CheckedContinuation<Void, Error>?
     private var activeBufferGeneration: UInt64 = 0
@@ -35,19 +36,10 @@ actor PiperPCMPlayer {
             throw PiperTextToSpeechEngineError.playbackFailed
         }
 
-        let engine = AVAudioEngine()
-        let player = AVAudioPlayerNode()
-        engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
-        try engine.start()
-        player.play()
-
-        audioEngine = engine
-        playerNode = player
+        let (engine, player) = try ensurePlaybackEngine(format: format)
 
         defer {
             if generation == playbackGeneration {
-                cleanupPlayback(generation: generation)
                 Task { await AudioSessionCoordinator.shared.releaseForHandoff() }
             }
         }
@@ -63,6 +55,13 @@ actor PiperPCMPlayer {
             destination.update(from: base, count: samples.count)
         }
 
+        if !engine.isRunning {
+            try engine.start()
+        }
+        if !player.isPlaying {
+            player.play()
+        }
+
         try await scheduleAndAwait(buffer: buffer, on: player, generation: generation)
 
         if Task.isCancelled || generation != playbackGeneration {
@@ -70,17 +69,49 @@ actor PiperPCMPlayer {
         }
     }
 
-    /// Stoppt die Wiedergabe sofort.
+    /// Stoppt die Wiedergabe sofort und gibt die Audio-Engine frei.
     func stop() {
         playbackGeneration &+= 1
         resumeActiveBuffer(with: PiperTextToSpeechEngineError.cancelled)
-        playerNode?.stop()
-        audioEngine?.stop()
-        audioEngine = nil
-        playerNode = nil
+        teardownEngine()
     }
 
     // MARK: - Intern
+
+    /// Stellt eine wiederverwendete Engine bereit – vermeidet pro Satz eine neue AVAudioEngine.
+    private func ensurePlaybackEngine(format: AVAudioFormat) throws -> (AVAudioEngine, AVAudioPlayerNode) {
+        if let audioEngine,
+           let playerNode,
+           let activeFormat,
+           activeFormat.sampleRate == format.sampleRate,
+           activeFormat.channelCount == format.channelCount {
+            return (audioEngine, playerNode)
+        }
+
+        teardownEngine()
+
+        let engine = AVAudioEngine()
+        let player = AVAudioPlayerNode()
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.prepare()
+
+        audioEngine = engine
+        playerNode = player
+        activeFormat = format
+        return (engine, player)
+    }
+
+    private func teardownEngine() {
+        playerNode?.stop()
+        audioEngine?.stop()
+        if let playerNode, let audioEngine {
+            audioEngine.detach(playerNode)
+        }
+        playerNode = nil
+        audioEngine = nil
+        activeFormat = nil
+    }
 
     private func scheduleAndAwait(
         buffer: AVAudioPCMBuffer,
@@ -110,14 +141,5 @@ actor PiperPCMPlayer {
         } else {
             continuation.resume()
         }
-    }
-
-    private func cleanupPlayback(generation: UInt64) {
-        guard generation == playbackGeneration else { return }
-        resumeActiveBuffer(with: PiperTextToSpeechEngineError.cancelled)
-        playerNode?.stop()
-        audioEngine?.stop()
-        audioEngine = nil
-        playerNode = nil
     }
 }

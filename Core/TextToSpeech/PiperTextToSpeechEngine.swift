@@ -105,6 +105,12 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
     private var speed: Float = AppSettingsStore.piperSpeed
     private var preparationTask: Task<Void, Error>?
     private var speakTask: Task<Void, Error>?
+    /// Vorab synthetisierter Text (inkl. Geschwindigkeit) – spart die Pause zwischen zwei Sprachteilen.
+    private var prefetchKey: String?
+    private var prefetchTask: Task<SherpaPiperSynthesisResult, Error>?
+
+    /// Serielle Queue – Sherpa-ONNX-Handles dürfen nicht parallel synthetisieren.
+    private static let synthesisQueue = DispatchQueue(label: "voicefinder.piper.synthesis", qos: .userInitiated)
 
     /// True, wenn das aktuelle Modell geladen ist.
     var isReady: Bool {
@@ -130,8 +136,25 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
     func setVoice(_ voice: PiperVoice) async {
         selectedVoice = voice
         if loadedVoiceID != voice.rawValue {
+            clearPrefetch()
             synthesizer = nil
             loadedVoiceID = nil
+        }
+    }
+
+    /// Synthetisiert Text im Hintergrund vor, während noch ein anderer Teil abgespielt wird.
+    func prefetch(text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let synthesizer else { return }
+
+        let key = Self.prefetchKey(text: trimmed, speed: speed)
+        guard key != prefetchKey else { return }
+
+        clearPrefetch()
+        let currentSpeed = speed
+        prefetchKey = key
+        prefetchTask = Task {
+            try await self.synthesizeOffMainThread(text: trimmed, speed: currentSpeed, using: synthesizer)
         }
     }
 
@@ -196,6 +219,7 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
     func stop() async {
         speakTask?.cancel()
         speakTask = nil
+        clearPrefetch()
         await player.stop()
     }
 
@@ -208,8 +232,6 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
         loadedVoiceID = nil
     }
 
-    // MARK: - Intern
-
     private func performSpeak(_ trimmed: String) async throws {
         try Task.checkCancellation()
         try await prepareIfNeeded()
@@ -221,11 +243,19 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
 
         let currentSpeed = speed
         let synthesisStart = CFAbsoluteTimeGetCurrent()
-        let result = try await synthesizeOffMainThread(
-            text: trimmed,
-            speed: currentSpeed,
-            using: synthesizer
-        )
+        let result: SherpaPiperSynthesisResult
+        if let prefetchTask, prefetchKey == Self.prefetchKey(text: trimmed, speed: currentSpeed) {
+            // Übernehmen statt abbrechen – die Synthese läuft bereits.
+            self.prefetchTask = nil
+            prefetchKey = nil
+            result = try await prefetchTask.value
+        } else {
+            result = try await synthesizeOffMainThread(
+                text: trimmed,
+                speed: currentSpeed,
+                using: synthesizer
+            )
+        }
         let synthesisSeconds = CFAbsoluteTimeGetCurrent() - synthesisStart
         NSLog(
             "[Voicefinder] Piper Synthese fertig (%.2f s, %d Samples @ %d Hz)",
@@ -269,6 +299,16 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
         }
     }
 
+    private func clearPrefetch() {
+        prefetchTask?.cancel()
+        prefetchTask = nil
+        prefetchKey = nil
+    }
+
+    private static func prefetchKey(text: String, speed: Float) -> String {
+        "\(speed)|\(text)"
+    }
+
     /// Führt Piper-Synthese auf einem Hintergrund-Thread aus.
     private func synthesizeOffMainThread(
         text: String,
@@ -276,7 +316,7 @@ actor PiperTextToSpeechEngine: TextToSpeechEngine {
         using synthesizer: SherpaPiperSynthesizer
     ) async throws -> SherpaPiperSynthesisResult {
         try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
+            Self.synthesisQueue.async {
                 do {
                     let result = try synthesizer.synthesize(text: text, speed: speed)
                     continuation.resume(returning: result)

@@ -447,32 +447,29 @@ enum ResponseSanitizer: Sendable {
     }
 
     /// Entfernt stotternde Wort-Wiederholungen (z. B. „leider leider leider …“).
-    nonisolated private static func collapseWordStutter(in text: String) -> String {
-        let words = text.split(whereSeparator: { $0.isWhitespace || $0 == "," || $0 == ";" })
-            .map { String($0).trimmingCharacters(in: CharacterSet(charactersIn: ".,;!?")) }
-            .filter { !$0.isEmpty }
-
+    /// Vergleicht Wörter ohne Satzzeichen, behält aber den Originaltext – Satzzeichen steuern Piper-Pausen und Betonung.
+    nonisolated static func collapseWordStutter(in text: String) -> String {
+        let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
         guard words.count >= 3 else { return text }
+
+        func comparisonKey(_ word: String) -> String {
+            word.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?…")).lowercased()
+        }
 
         var result: [String] = []
         var index = 0
         while index < words.count {
-            let current = words[index].lowercased()
+            let current = comparisonKey(words[index])
             var runLength = 1
-            while index + runLength < words.count,
-                  words[index + runLength].lowercased() == current {
+            while !current.isEmpty,
+                  index + runLength < words.count,
+                  comparisonKey(words[index + runLength]) == current {
                 runLength += 1
             }
 
-            if runLength >= 2 {
-                result.append(words[index])
-                index += runLength
-            } else {
-                for offset in 0 ..< runLength {
-                    result.append(words[index + offset])
-                }
-                index += runLength
-            }
+            // Letztes Wort der Wiederholung behalten – trägt das abschließende Satzzeichen.
+            result.append(words[index + runLength - 1])
+            index += runLength
         }
 
         return result.joined(separator: " ")

@@ -26,6 +26,9 @@ cd "$ROOT"
 echo "→ Pakete auflösen …"
 xcodebuild -resolvePackageDependencies -scheme Voicefinder
 
+echo "→ MLX-Metal-Warnungen patchen (Xcode 26) …"
+"${ROOT}/Scripts/patch-mlx-metal-warnings.sh"
+
 echo ""
 echo "✓ Fertig."
 echo "  1. Xcode komplett schließen und Projekt neu öffnen"

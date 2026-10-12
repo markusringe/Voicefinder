@@ -11,6 +11,8 @@ import SwiftUI
 struct VoiceSettingsView: View {
     @ObservedObject var viewModel: ConversationViewModel
 
+    @AppStorage(AppSettingsStore.earlySpeechEnabledKey) private var earlySpeechEnabled = true
+
     /// True, wenn alle vier ONNX-Stimmen im App-Bundle liegen.
     private var isBundleComplete: Bool {
         PiperModelProvider.isFullyBundled
@@ -80,6 +82,18 @@ struct VoiceSettingsView: View {
                 Text("Tempo")
             } footer: {
                 Text("1,0× ist die Standardgeschwindigkeit des Modells. Höhere Werte sprechen schneller.")
+            }
+
+            Section {
+                Toggle("Früher antworten", isOn: $earlySpeechEnabled)
+            } header: {
+                Text("Reaktionszeit")
+            } footer: {
+                Text(
+                    AppMemoryCoordinator.allowsConcurrentLLMAndTTS
+                        ? "Der erste Satz wird schon vorgelesen, während die KI den Rest noch formuliert."
+                        : "Der erste Satz wird schon vorgelesen, während die KI den Rest noch formuliert. Auf diesem Gerät gerade nicht verfügbar – zu wenig Arbeitsspeicher."
+                )
             }
 
             Section {
