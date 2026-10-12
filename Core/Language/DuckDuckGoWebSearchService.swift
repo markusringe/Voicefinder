@@ -12,6 +12,7 @@ enum WebSearchError: LocalizedError, Sendable {
     case invalidQuery
     case invalidResponse
     case emptyResults
+    case timedOut
 
     var errorDescription: String? {
         switch self {
@@ -21,6 +22,8 @@ enum WebSearchError: LocalizedError, Sendable {
             "Web-Antwort konnte nicht gelesen werden."
         case .emptyResults:
             "Keine passenden Web-Ergebnisse gefunden."
+        case .timedOut:
+            "Die Web-Recherche hat zu lange gedauert."
         }
     }
 }

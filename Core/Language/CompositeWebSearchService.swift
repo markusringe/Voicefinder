@@ -13,6 +13,9 @@ struct CompositeWebSearchService: WebSearchProviding, Sendable {
     private let duckDuckGo: DuckDuckGoWebSearchService
     private let google: GoogleCustomSearchService
 
+    /// Zeichenbudget für die Wikipedia-Passage – genug für zwei Sätze, wenig Prefill für das 1,7B-Modell.
+    private static let passageBudget = 450
+
     init(
         wikipedia: WikipediaSearchService = WikipediaSearchService(),
         duckDuckGo: DuckDuckGoWebSearchService = DuckDuckGoWebSearchService(),
@@ -26,12 +29,27 @@ struct CompositeWebSearchService: WebSearchProviding, Sendable {
     func fetchContext(for query: String) async throws -> String {
         var parts: [String] = []
 
-        if let wiki = try? await wikipedia.fetchSummary(for: query), !wiki.isEmpty {
-            parts.append("Wikipedia: \(wiki)")
-            NSLog("[Voicefinder] Web-Recherche: Wikipedia-Treffer.")
+        // Schlüsselwörter statt ganzer Satz – der Satz liefert oft den falschen Artikel.
+        let searchQuery = WebSearchQuery.make(from: query)
+        do {
+            if let passage = try await wikipedia.fetchPassage(for: searchQuery, maxCharacters: Self.passageBudget) {
+                parts.append("Wikipedia – \(passage)")
+                NSLog("[Voicefinder] Web-Recherche: Wikipedia-Treffer.")
+            } else {
+                #if DEBUG
+                NSLog("[Voicefinder] Web-Recherche: keine passende Wikipedia-Passage für „%@“.", searchQuery.searchTerms)
+                #endif
+            }
+        } catch {
+            #if DEBUG
+            NSLog("[Voicefinder] Web-Recherche: Wikipedia-Fehler: %@", String(describing: error))
+            #endif
         }
 
-        if let engineContext = await fetchFromConfiguredEngine(query: query), !engineContext.isEmpty {
+        // Nur ohne Wikipedia-Passage weitersuchen: Die DuckDuckGo-Instant-Answer-API liefert bei Fragesätzen
+        // nichts und kostet nur Wartezeit; Google (falls konfiguriert) ergänzt, wenn Wikipedia nichts hat.
+        if parts.isEmpty,
+           let engineContext = await fetchFromConfiguredEngine(query: query), !engineContext.isEmpty {
             parts.append(engineContext)
         }
 
@@ -57,11 +75,16 @@ struct CompositeWebSearchService: WebSearchProviding, Sendable {
             }
             fallthrough
         case .duckDuckGo:
-            if let context = try? await duckDuckGo.fetchContext(for: query) {
+            do {
+                let context = try await duckDuckGo.fetchContext(for: query)
                 NSLog("[Voicefinder] Web-Recherche: DuckDuckGo.")
                 return context
+            } catch {
+                #if DEBUG
+                NSLog("[Voicefinder] Web-Recherche: DuckDuckGo-Fehler: %@", String(describing: error))
+                #endif
+                return nil
             }
-            return nil
         }
     }
 }
