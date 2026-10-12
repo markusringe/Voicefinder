@@ -470,6 +470,9 @@ actor ConversationOrchestrator {
             guard self.isListening, !self.isSTTSuspended, !self.isMicrophoneMutedByUser else { return }
             guard !self.isPipelineActive else { return }
             guard self.latestPartialUtterance == text else { return }
+            #if DEBUG
+            NSLog("[Voicefinder] STT-Fallback (kein Final nach 2,5 s): %@", text)
+            #endif
             await self.submitDetectedUtterance(text)
         }
     }
@@ -613,6 +616,9 @@ actor ConversationOrchestrator {
 
     private func applyFinalTranscript(_ finalText: String) async {
         guard !isSTTSuspended, !isMicrophoneMutedByUser else { return }
+        #if DEBUG
+        NSLog("[Voicefinder] STT-Final übernommen: %@", finalText)
+        #endif
 
         // Partial-Fallback-Timer abbrechen – Final hat Vorrang.
         utteranceEndTask?.cancel()

@@ -61,7 +61,22 @@ private final class LiveRecognitionState: @unchecked Sendable {
     nonisolated func assignRequest(_ newRequest: SFSpeechAudioBufferRecognitionRequest?) {
         lock.lock()
         request = newRequest
+        accumulator.reset()
         lock.unlock()
+    }
+
+    /// Führt Teilergebnisse über Apple-Speech-Resets (nach Sprechpausen) zusammen.
+    nonisolated(unsafe) private var accumulator = TranscriptAccumulator()
+
+    /// Liefert den vollständigen Äußerungstext für ein Roh-Ergebnis (in Callback-Reihenfolge aufrufen).
+    nonisolated func accumulate(_ text: String, segmentCount: Int, isFinal: Bool) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        let full = accumulator.ingest(text, segmentCount: segmentCount, at: ProcessInfo.processInfo.systemUptime)
+        if isFinal {
+            accumulator.reset()
+        }
+        return full
     }
 }
 
@@ -90,6 +105,8 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
     private var pendingRecognitionText: String?
     private var pendingRecognitionIsFinal = false
     private var recognitionFlushTask: Task<Void, Never>?
+    /// True, solange der Mikrofon-Tap auf der laufenden Engine installiert ist.
+    private var isTapInstalled = false
 
     init(locale: Locale = Locale(identifier: "de-DE")) {
         self.locale = locale
@@ -137,12 +154,11 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
 
     /// Pausiert Spracherkennung während KI-Antwort/TTS.
     ///
-    /// Engine und Audio-Session werden freigegeben, damit TTS die Hardware ohne `!pri`-Konflikt übernehmen kann.
+    /// Mikrofon-Engine und Audio-Session laufen weiter (Gesprächsprofil) – der Tap verwirft Audio,
+    /// solange pausiert ist. So ist das Mikrofon nach der Antwort sofort wieder bereit.
     func pauseStreaming() async {
         liveRecognition.setPaused(true)
         cleanupRecognition()
-        stopAudioCapture()
-        await AudioSessionCoordinator.shared.releaseForHandoff()
     }
 
     /// Setzt Aufnahme und Erkennung nach TTS fort – ohne neue AsyncStreams (Orchestrator behält Consumer).
@@ -156,6 +172,9 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
         try await ensureAudioCaptureRunning()
         liveRecognition.setPaused(false)
         try startRecognitionSession()
+        #if DEBUG
+        NSLog("[Voicefinder] STT bereit (Resume).")
+        #endif
     }
 
     func stopStreaming() async {
@@ -167,6 +186,7 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
             audioEngine.inputNode.removeTap(onBus: 0)
         }
         self.audioEngine = nil
+        isTapInstalled = false
 
         await AudioSessionCoordinator.shared.deactivate()
 
@@ -176,16 +196,6 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
     }
 
     // MARK: - Intern
-
-    /// Stoppt Tap und Engine, behält aber die Engine-Instanz für einen schnellen Resume.
-    private func stopAudioCapture() {
-        guard let audioEngine else { return }
-
-        if audioEngine.isRunning {
-            audioEngine.stop()
-        }
-        audioEngine.inputNode.removeTap(onBus: 0)
-    }
 
     /// Stellt Mikrofon-Tap und laufende Engine wieder her (ohne Stream-Reset).
     private func ensureAudioCaptureRunning() async throws {
@@ -198,8 +208,20 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
         }
 
         let audioEngine = await acquireAudioEngine()
+        // Läuft noch aus der letzten Runde (Pause) – Tap ist installiert, nichts neu aufbauen.
+        if audioEngine.isRunning, isTapInstalled {
+            return
+        }
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
+        #if DEBUG
+        NSLog(
+            "[Voicefinder] STT Eingang: %.0f Hz, %d Kanäle, Route: %@",
+            recordingFormat.sampleRate,
+            recordingFormat.channelCount,
+            AVAudioSession.sharedInstance().currentRoute.inputs.map(\.portName).joined(separator: ", ")
+        )
+        #endif
 
         guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
             throw AppleSpeechTranscriberError.audioEngineFailed(
@@ -222,6 +244,7 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
             levelCont.yield(AudioLevelNormalizer.normalizedRMS(from: buffer))
         }
 
+        isTapInstalled = true
         audioEngine.prepare()
 
         guard !audioEngine.isRunning else { return }
@@ -230,6 +253,7 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
             try audioEngine.start()
         } catch {
             inputNode.removeTap(onBus: 0)
+            isTapInstalled = false
             throw AppleSpeechTranscriberError.audioEngineFailed(error.localizedDescription)
         }
     }
@@ -265,11 +289,31 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
         recognitionRequest = request
         liveRecognition.assignRequest(request)
 
+        let liveState = liveRecognition
         recognitionTask = speechRecognizer.recognitionTask(with: request) { [weak self] result, error in
             guard let self else { return }
 
             if let result {
-                let text = result.bestTranscription.formattedString
+                let rawText = result.bestTranscription.formattedString
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                // Leere Ergebnisse (z. B. beim Abbrechen) nicht mit altem Text auffüllen.
+                let text = rawText.isEmpty
+                    ? rawText
+                    : liveState.accumulate(
+                        rawText,
+                        segmentCount: result.bestTranscription.segments.count,
+                        isFinal: result.isFinal
+                    )
+                #if DEBUG
+                // Diagnose: jedes Roh-Ergebnis mit Segmentanzahl (Transkript-Resets sichtbar machen).
+                NSLog(
+                    "[Voicefinder] STT roh (final=%d, Segmente=%d): %@ → %@",
+                    result.isFinal ? 1 : 0,
+                    result.bestTranscription.segments.count,
+                    rawText,
+                    text
+                )
+                #endif
                 if result.isFinal {
                     // Finale Segmente sofort verarbeiten – Pipeline darf nicht warten.
                     Task {
@@ -282,7 +326,10 @@ actor AppleSpeechTranscriber: SpeechToTextEngine, PausableSpeechToTextEngine {
                 }
             }
 
-            if error != nil {
+            if let error {
+                #if DEBUG
+                NSLog("[Voicefinder] STT Fehler: %@", error.localizedDescription)
+                #endif
                 Task {
                     await self.cleanupRecognition()
                 }

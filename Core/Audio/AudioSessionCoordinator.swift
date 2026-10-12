@@ -21,8 +21,11 @@ actor AudioSessionCoordinator {
     /// Merkt sich das aktive Profil, um unnötige `setCategory`-Aufrufe zu vermeiden.
     private enum SessionProfile: Sendable {
         case none
-        case recording
-        case playback
+        /// Gespräch ohne Barge-in: STT und TTS teilen sich eine durchgehend aktive Session –
+        /// kein Kategorie-/Moduswechsel zwischen Zuhören und Sprechen, Mikrofon sofort wieder bereit.
+        case conversation
+        /// Sprachausgabe mit Barge-in (Echo-Unterdrückung über `.voiceChat`).
+        case bargeInPlayback
         case microphoneOnly
     }
 
@@ -35,14 +38,18 @@ actor AudioSessionCoordinator {
         bargeInEnabled = enabled
     }
 
-    /// Gibt die Audio-Session frei, bevor TTS die Hardware übernimmt (nach STT-Pause).
+    /// Gibt die Audio-Session frei, bevor ein anderes Profil die Hardware übernimmt.
+    ///
+    /// Im Gesprächsprofil bleibt die Session aktiv – STT und TTS nutzen dieselbe Konfiguration,
+    /// ein Deaktivieren würde das Mikrofon nach jeder Antwort ~0,85 s taub machen.
     func releaseForHandoff() async {
+        guard activeProfile != .conversation else { return }
         await deactivateInternal()
     }
 
     /// Aktiviert die Session für Mikrofon-Eingabe (Apple Speech).
     func activateRecording() async throws {
-        try await applyProfile(.recording)
+        try await applyProfile(.conversation)
     }
 
     /// Nur Aufnahme (WhisperKit-Recorder) – weniger Audio-HAL-Stress im Simulator als `.playAndRecord`.
@@ -55,7 +62,7 @@ actor AudioSessionCoordinator {
     /// Nutzt `.playAndRecord` + Lautsprecher statt reiner `.playback`-Kategorie, damit der Wechsel
     /// von STT zu TTS keinen `!pri`-Fehler (InsufficientPriority) auslöst und die Stimme hörbar bleibt.
     func activatePlayback() async throws {
-        try await applyProfile(.playback)
+        try await applyProfile(bargeInEnabled ? .bargeInPlayback : .conversation)
     }
 
     /// Deaktiviert die Session, z. B. beim vollständigen Stoppen des Mikrofons.
@@ -81,28 +88,21 @@ actor AudioSessionCoordinator {
         let session = AVAudioSession.sharedInstance()
 
         switch profile {
-        case .recording:
+        case .conversation:
+            // Ein Modus für Zuhören und Sprechen – `.measurement` würde die Lautsprecher-Ausgabe dämpfen,
+            // `.spokenAudio` taugt nicht für Aufnahme.
             try session.setCategory(
                 .playAndRecord,
-                mode: .measurement,
-                options: [.defaultToSpeaker, .allowBluetoothHFP]
+                mode: .default,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
             )
 
-        case .playback:
-            if bargeInEnabled {
-                try session.setCategory(
-                    .playAndRecord,
-                    mode: .voiceChat,
-                    options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
-                )
-            } else {
-                // Gleiche Basiskategorie wie STT – nur Modus für Sprachausgabe angepasst.
-                try session.setCategory(
-                    .playAndRecord,
-                    mode: .spokenAudio,
-                    options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
-                )
-            }
+        case .bargeInPlayback:
+            try session.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .duckOthers]
+            )
 
         case .microphoneOnly:
             try session.setCategory(.record, mode: .default, options: [])
