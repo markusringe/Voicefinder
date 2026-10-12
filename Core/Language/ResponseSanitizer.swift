@@ -546,14 +546,15 @@ enum ResponseSanitizer: Sendable {
         let lastSentence = sentences[sentences.count - 1]
         guard lastSentence.contains("?") else { return candidate }
 
-        for previous in recentAssistantTexts {
-            let previousSentences = deduplicateSentences(sentencesForSpeech(previous))
-            guard let previousQuestion = previousSentences.last, previousQuestion.contains("?") else { continue }
-            if followUpQuestionsAreSimilar(lastSentence, previousQuestion) {
-                sentences.removeLast()
-                let joined = sentences.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
-                return ensureTerminalPunctuation(joined)
-            }
+        // Alle Fragen der letzten Antworten prüfen – nicht nur die letzte: Wurde eine Wiederholung schon
+        // entfernt, endet die gespeicherte Antwort ohne Frage, und die Frage käme sonst eine Runde später zurück.
+        let previousQuestions = recentAssistantTexts
+            .flatMap { sentencesForSpeech($0) }
+            .filter { $0.contains("?") }
+        if previousQuestions.contains(where: { followUpQuestionsAreSimilar(lastSentence, $0) }) {
+            sentences.removeLast()
+            let joined = sentences.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            return ensureTerminalPunctuation(joined)
         }
         return candidate
     }
@@ -598,8 +599,10 @@ enum ResponseSanitizer: Sendable {
     }
 
     /// True, wenn zwei Folgefragen inhaltlich dieselbe Richtung haben.
+    /// Kurze Rückfragen („Was bringst du heute mit?“) haben zu wenige Inhaltswörter für den Inhaltsvergleich
+    /// (mindestens 5) – daher zusätzlich der normalisierte Satzvergleich.
     nonisolated private static func followUpQuestionsAreSimilar(_ a: String, _ b: String) -> Bool {
-        contentWordsAreNearlyIdentical(a, b, threshold: 0.82)
+        sentencesAreDuplicates(a, b) || contentWordsAreNearlyIdentical(a, b, threshold: 0.82)
     }
 
     /// True bei leeren Bestätigungen ohne Gesprächsführung.
